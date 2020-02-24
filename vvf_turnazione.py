@@ -156,7 +156,9 @@ print("Creating auxiliary variables...")
 for v1 in vigili:
 	for v2 in vigili:
 		if v1 != v2:
-			var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_aux_diff_servizi({},{})".format(v1, v2))
+			#VAR: differenza numero servizi tra due vigili (ausiliaria)
+			# var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_aux_diff_servizi({},{})".format(v1, v2))
+			var_differenza_servizi[(v1, v2)] = solver.NumVar(-1, 1, "var_aux_diff_servizi({},{})".format(v1, v2))
 			constr_differenza_servizi[(v1, v2, '+')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_plus_vigili({},{})".format(v1, v2))
 			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
 			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v1], 1)
