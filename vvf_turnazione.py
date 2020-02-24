@@ -38,10 +38,13 @@ var_servizi_vigile = {}
 constr_servizi_vigile = {}
 var_differenza_servizi = {}
 constr_differenza_servizi = {}
-constr_auxiliary = {}
 
 #Model
 solver = pywraplp.Solver('VVF_turni', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+
+#Solver Parameters
+solver.EnableOutput()
+solver.SetNumThreads(2)
 
 print("Creating model...")
 giorno = 0
@@ -149,17 +152,24 @@ for vigile in vigili:
 			constr_servizi_vigile[vigile].SetCoefficient(var_festivi[giorno][vigile], 1) #2) #)
 
 print("Creating auxiliary variables...")
-#CONSTR: max 1 servizio di defferenza tra ogni coppia di vigili
+#CONSTR: max 1 servizio di differenza tra ogni coppia di vigili
 for v1 in vigili:
 	for v2 in vigili:
 		if v1 != v2:
 			var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_differenza_servizi({}, {})".format(v1, v2))
-			constr_differenza_servizi[(v1, v2)] = solver.Constraint(0, 0)
-			constr_differenza_servizi[(v1, v2)].SetCoefficient(var_differenza_servizi[(v1, v2)], 1)
-			constr_differenza_servizi[(v1, v2)].SetCoefficient(var_servizi_vigile[v1], 1)
-			constr_differenza_servizi[(v1, v2)].SetCoefficient(var_servizi_vigile[v2], -1)
-			constr_auxiliary[(v1, v2)] = solver.Constraint(-1, 1)
-			constr_auxiliary[(v1, v2)].SetCoefficient(var_differenza_servizi[(v1, v2)], 1)
+			# v1-v2<=aux
+			constr_differenza_servizi[(v1, v2, '+')] = solver.Constraint(-solver.infinity(), 0)
+			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
+			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v1], 1)
+			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v2], -1)
+			# v2-v1<=aux
+			constr_differenza_servizi[(v1, v2, '-')] = solver.Constraint(-solver.infinity(), 0)
+			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
+			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v1], -1)
+			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v2], 1)
+			
+# TIME LIMIT
+solver.SetTimeLimit(60000) #ms
 
 # OBJECTIVE
 objective = solver.Objective()
@@ -171,11 +181,22 @@ objective.SetMinimization()
 
 print("Model has {} variables and {} constraints.".format(solver.NumVariables(), solver.NumConstraints()))
 
+model = open("model.txt", "w")
+model.write(solver.ExportModelAsLpFormat(False))
+# model.write(solver.ExportModelAsMpsFormat(True, False))
+model.close()
+exit()
+
 print("Solving model...")
 status = solver.Solve()
 
 # Print solution
-if status == pywraplp.Solver.OPTIMAL:
+if status == pywraplp.Solver.INFEASIBLE:
+	print('The problem does not have an optimal solution.')
+	print('Relax your constraints and try again.')
+else:
+	if status == pywraplp.Solver.FEASIBLE:
+		print("WARNING: solution is not optimal.")
 	print('Solution:')
 	print('Objective value =', solver.Objective().Value())
 	print("* Notti:")
@@ -199,6 +220,4 @@ if status == pywraplp.Solver.OPTIMAL:
 	for vigile in vigili:
 		print("Vigile {}: {}".format(vigile, int(var_servizi_vigile[vigile].solution_value())))
 		# print("Vigile {}: {}".format(vigile, var_servizi_vigile[vigile].solution_value()))
-	#TODO
-else:
-	print('The problem does not have an optimal solution.')
+	#TODO	
