@@ -59,7 +59,7 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 			var_notti[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_notte({})".format(vigile, curr_giorno))
 			
 		#CONSTR: 1 vigile per notte
-		constr_notti[curr_giorno] = solver.Constraint(1, 1)
+		constr_notti[curr_giorno] = solver.Constraint(1, 1, "constr_notte({})".format(curr_giorno))
 		for var in var_notti[curr_giorno].values():
 			constr_notti[curr_giorno].SetCoefficient(var, 1)
 			
@@ -72,7 +72,7 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 				var_sabati[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_sabato({})".format(vigile, curr_giorno))
 
 			#CONSTR: 1 vigile per sabato
-			constr_sabati[curr_giorno] = solver.Constraint(1, 1)
+			constr_sabati[curr_giorno] = solver.Constraint(1, 1, "constr_sabato({})".format(curr_giorno))
 			for vigile in vigili:
 				constr_sabati[curr_giorno].SetCoefficient(var_sabati[curr_giorno][vigile], 1)
 
@@ -85,12 +85,12 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 				var_festivi[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_festivo({})".format(vigile, curr_giorno))
 				
 			#CONSTR: 3-4 vigili per festivo
-			constr_festivi[curr_giorno] = solver.Constraint(3, 4)
+			constr_festivi[curr_giorno] = solver.Constraint(3, 4, "constr_festivo({})".format(curr_giorno))
 			for vigile in vigili:
 				constr_festivi[curr_giorno].SetCoefficient(var_festivi[curr_giorno][vigile], 1)
 				
 			#CONSTR: almeno 1 autista per festivo
-			constr_festivi_autista[curr_giorno] = solver.Constraint(1, solver.infinity())
+			constr_festivi_autista[curr_giorno] = solver.Constraint(1, solver.infinity(), "constr_festivo_autista({})".format(curr_giorno))
 			for autista in vigili_autisti:
 				constr_festivi_autista[curr_giorno].SetCoefficient(var_festivi[curr_giorno][autista], 1)
 			
@@ -98,7 +98,7 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 	settimana = int(giorno / 7)
 	constr_notti_settimana_vigile[settimana] = {}
 	for vigile in vigili_squadra[squadra]:
-		constr_notti_settimana_vigile[settimana][vigile] = solver.Constraint(0, 1)
+		constr_notti_settimana_vigile[settimana][vigile] = solver.Constraint(-solver.infinity(), 1, "constr_una_notte_settimana({})_vigile({})".format(settimana, vigile))
 		for i in range(7):
 			curr_giorno = giorno + i
 			constr_notti_settimana_vigile[settimana][vigile].SetCoefficient(var_notti[curr_giorno][vigile], 1)
@@ -108,14 +108,14 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 
 for vigile in vigili:
 	#CONSTR: max 1 sabato
-	constr_sabati_vigile[vigile] = solver.Constraint(0, 1)
+	constr_sabati_vigile[vigile] = solver.Constraint(-solver.infinity(), 1, "constr_un_sabato_vigile({})".format(vigile))
 	for sabato in var_sabati.keys():
 		constr_sabati_vigile[vigile].SetCoefficient(var_sabati[sabato][vigile], 1)
 		
 	#CONSTR: max 1 tra venerdì notte, sabato e sabato notte
 	constr_sabati_notti_circostanti_vigile[vigile] = {}
 	for sabato in var_sabati.keys():
-		constr_sabati_notti_circostanti_vigile[vigile][sabato] = solver.Constraint(0, 1)
+		constr_sabati_notti_circostanti_vigile[vigile][sabato] = solver.Constraint(-solver.infinity(), 1, "constr_sabato_notte_consecutivi_vigile({})_sabato({})".format(vigile, sabato))
 		constr_sabati_notti_circostanti_vigile[vigile][sabato].SetCoefficient(var_sabati[sabato][vigile], 1)
 		if vigile in var_notti[sabato].keys():
 			constr_sabati_notti_circostanti_vigile[vigile][sabato].SetCoefficient(var_notti[sabato][vigile], 1)
@@ -124,14 +124,14 @@ for vigile in vigili:
 			constr_sabati_notti_circostanti_vigile[vigile][sabato].SetCoefficient(var_notti[venerdi][vigile], 1)
 		
 	#CONSTR: 3-5 festivi l'anno #NOTA: 4-5 non ha soluzione
-	constr_festivi_vigile[vigile] = solver.Constraint(3, 5)
+	constr_festivi_vigile[vigile] = solver.Constraint(3, 5, "constr_festivi_annuali_vigile({})".format(vigile))
 	for festivo in var_festivi.keys():
 		constr_festivi_vigile[vigile].SetCoefficient(var_festivi[festivo][vigile], 1)
 		
 	#CONSTR: max 1 tra festivo e notti circostanti
 	constr_festivi_notti_circostanti_vigile[vigile] = {}
 	for festivo in var_sabati.keys():
-		constr_festivi_notti_circostanti_vigile[vigile][festivo] = solver.Constraint(0, 1)
+		constr_festivi_notti_circostanti_vigile[vigile][festivo] = solver.Constraint(-solver.infinity(), 1, "constr_festivo_notte_consecutivi_vigile({})_festivo({})".format(vigile, festivo))
 		constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(var_sabati[festivo][vigile], 1)
 		if vigile in var_notti[festivo].keys():
 			constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(var_notti[festivo][vigile], 1)
@@ -140,8 +140,8 @@ for vigile in vigili:
 			constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(var_notti[giorno_prima][vigile], 1)
 
 	#VAR: somma servizi per vigile (ausiliaria)
-	var_servizi_vigile[vigile] = solver.NumVar(0, solver.infinity(), "var_servizi_vigile({})".format(vigile))
-	constr_servizi_vigile[vigile] = solver.Constraint(0, 0)
+	var_servizi_vigile[vigile] = solver.NumVar(0, solver.infinity(), "var_aux_servizi_vigile({})".format(vigile))
+	constr_servizi_vigile[vigile] = solver.Constraint(0, 0, "constr_somma_servizi_vigile({})".format(vigile))
 	constr_servizi_vigile[vigile].SetCoefficient(var_servizi_vigile[vigile], -1)
 	for giorno in range(len(var_notti.keys())):
 		if vigile in var_notti[giorno].keys():
@@ -156,20 +156,18 @@ print("Creating auxiliary variables...")
 for v1 in vigili:
 	for v2 in vigili:
 		if v1 != v2:
-			var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_differenza_servizi({}, {})".format(v1, v2))
-			# v1-v2<=aux
-			constr_differenza_servizi[(v1, v2, '+')] = solver.Constraint(-solver.infinity(), 0)
+			var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_aux_diff_servizi({},{})".format(v1, v2))
+			constr_differenza_servizi[(v1, v2, '+')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_plus_vigili({},{})".format(v1, v2))
 			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
 			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v1], 1)
 			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v2], -1)
-			# v2-v1<=aux
-			constr_differenza_servizi[(v1, v2, '-')] = solver.Constraint(-solver.infinity(), 0)
+			constr_differenza_servizi[(v1, v2, '-')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_minus_vigili({},{})".format(v1, v2))
 			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
 			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v1], -1)
 			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v2], 1)
 			
 # TIME LIMIT
-solver.SetTimeLimit(60000) #ms
+solver.SetTimeLimit(300000) #ms
 
 # OBJECTIVE
 objective = solver.Objective()
@@ -185,7 +183,6 @@ model = open("model.txt", "w")
 model.write(solver.ExportModelAsLpFormat(False))
 # model.write(solver.ExportModelAsMpsFormat(True, False))
 model.close()
-exit()
 
 print("Solving model...")
 status = solver.Solve()
