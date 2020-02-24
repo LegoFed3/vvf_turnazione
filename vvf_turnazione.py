@@ -1,22 +1,24 @@
 from __future__ import print_function
 from ortools.linear_solver import pywraplp
+import vvf_io
 
+DB = vvf_io.read_csv_vigili()
 
-# TODO: actual parser
 print("Input data:")
-vigili = list([i for i in range(68)])
-vigili_autisti = vigili[:20]
-vigili_squadra = []
+vigili = list(DB.keys())
+vigili_autisti = list(i for i in DB.keys() if DB[i].is_autista())
+vigili_squadra = {}
 num_squadre = 4
 for i in range(num_squadre):
-	vigili_squadra.append(list([j for j in vigili if j%num_squadre==i]))
+	squadra = i + 1
+	vigili_squadra[squadra] = list(i for i in DB.keys() if DB[i].squadra==squadra)
 
 num_giorni = 365
-giorni_festivi_extra = []
+giorni_festivi_speciali = [100, 350]
 
 print("* Vigili: ", vigili)
 print("* Squadre: ", vigili_squadra)
-print("* Festivi extra: ", giorni_festivi_extra)
+print("* Festivi speciali: ", giorni_festivi_speciali)
 	
 #Collections
 var_notti = {}
@@ -48,7 +50,7 @@ solver.SetNumThreads(2)
 
 print("Creating model...")
 giorno = 0
-squadra = 0
+squadra = 1
 while giorno < num_giorni or squadra != (num_squadre - 1):
 	for i in range(7):
 		curr_giorno = giorno + i
@@ -64,7 +66,7 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 			constr_notti[curr_giorno].SetCoefficient(var, 1)
 			
 		#SABATO
-		if i == 1 and curr_giorno not in giorni_festivi_extra:
+		if i == 1 and curr_giorno not in giorni_festivi_speciali:
 
 			#VAR: vigile candidati per il sabato
 			var_sabati[curr_giorno] = {}
@@ -77,7 +79,7 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 				constr_sabati[curr_giorno].SetCoefficient(var_sabati[curr_giorno][vigile], 1)
 
 		#FESTIVO
-		if i == 2 or curr_giorno in giorni_festivi_extra:
+		if i == 2 or curr_giorno in giorni_festivi_speciali:
 			
 			#VAR: vigili candidati per il festivo
 			var_festivi[curr_giorno] = {}
@@ -103,7 +105,7 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 			curr_giorno = giorno + i
 			constr_notti_settimana_vigile[settimana][vigile].SetCoefficient(var_notti[curr_giorno][vigile], 1)
 
-	squadra = (squadra + 1) % num_squadre
+	squadra = (squadra % num_squadre) + 1
 	giorno += 7
 
 for vigile in vigili:
