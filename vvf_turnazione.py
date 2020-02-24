@@ -153,20 +153,20 @@ for vigile in vigili:
 
 print("Creating auxiliary variables...")
 #CONSTR: max 1 servizio di differenza tra ogni coppia di vigili
-for v1 in vigili:
-	for v2 in vigili:
-		if v1 != v2:
-			#VAR: differenza numero servizi tra due vigili (ausiliaria)
-			# var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_aux_diff_servizi({},{})".format(v1, v2))
-			var_differenza_servizi[(v1, v2)] = solver.NumVar(-1, 1, "var_aux_diff_servizi({},{})".format(v1, v2))
-			constr_differenza_servizi[(v1, v2, '+')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_plus_vigili({},{})".format(v1, v2))
-			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
-			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v1], 1)
-			constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v2], -1)
-			constr_differenza_servizi[(v1, v2, '-')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_minus_vigili({},{})".format(v1, v2))
-			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
-			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v1], -1)
-			constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v2], 1)
+for i in range(len(vigili)):
+	v1 = vigili[i]
+	for j in range(i+1, len(vigili)):
+		v2 = vigili[j]
+		#VAR: differenza numero servizi tra due vigili (ausiliaria)
+		var_differenza_servizi[(v1, v2)] = solver.NumVar(-solver.infinity(), solver.infinity(), "var_aux_diff_servizi({},{})".format(v1, v2))
+		constr_differenza_servizi[(v1, v2, '+')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_plus_vigili({},{})".format(v1, v2))
+		constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
+		constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v1], 1)
+		constr_differenza_servizi[(v1, v2, '+')].SetCoefficient(var_servizi_vigile[v2], -1)
+		constr_differenza_servizi[(v1, v2, '-')] = solver.Constraint(-solver.infinity(), 0, "constr_diff_servizi_minus_vigili({},{})".format(v1, v2))
+		constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_differenza_servizi[(v1, v2)], -1)
+		constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v1], -1)
+		constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v2], 1)
 			
 # TIME LIMIT
 solver.SetTimeLimit(300000) #ms
