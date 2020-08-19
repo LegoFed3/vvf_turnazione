@@ -10,7 +10,6 @@ squadra_di_partenza = 1
 
 DB = vvf_io.read_csv_vigili()
 vigili = list(DB.keys())
-vigili_autisti = list(i for i in DB.keys() if DB[i].is_autista())
 vigili_squadra = {}
 vigili_gruppi_festivo = {}
 for vigile in vigili:
@@ -56,6 +55,7 @@ constr_festivi_notti_circostanti_vigile = {}
 
 var_servizi_vigile = {}
 constr_servizi_vigile = {}
+constr_notti_comandanti = {}
 var_differenza_servizi = {}
 constr_differenza_servizi = {}
 
@@ -81,7 +81,8 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 		# for vigile in vigili_squadra[squadra]:
 			# var_notti[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_notte({})".format(vigile, curr_giorno))
 		for vigile in vigili:
-			var_notti[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_notte({})".format(vigile, curr_giorno))
+			if not DB[vigile].esente_notti():
+				var_notti[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_notte({})".format(vigile, curr_giorno))
 			
 		#CONSTR: 1 vigile per notte
 		constr_notti[curr_giorno] = solver.Constraint(1, 1, "constr_notte({})".format(curr_giorno))
@@ -94,12 +95,14 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 			#VAR: vigile candidati per il sabato
 			var_sabati[curr_giorno] = {}
 			for vigile in vigili:
-				var_sabati[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_sabato({})".format(vigile, curr_giorno))
+				if not DB[vigile].esente_diurni():
+					var_sabati[curr_giorno][vigile] = solver.IntVar(0, 1, "var_vigile({})_sabato({})".format(vigile, curr_giorno))
 
 			#CONSTR: 1 vigile per sabato
 			constr_sabati[curr_giorno] = solver.Constraint(1, 1, "constr_sabato({})".format(curr_giorno))
 			for vigile in vigili:
-				constr_sabati[curr_giorno].SetCoefficient(var_sabati[curr_giorno][vigile], 1)
+				if not DB[vigile].esente_diurni():
+					constr_sabati[curr_giorno].SetCoefficient(var_sabati[curr_giorno][vigile], 1)
 
 		#FESTIVO
 		if curr_data.weekday() == 6 or curr_data in giorni_festivi_speciali:
@@ -118,10 +121,11 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 	settimana = int(giorno / 7)
 	constr_notti_settimana_vigile[settimana] = {}
 	for vigile in vigili_squadra[squadra]:
-		constr_notti_settimana_vigile[settimana][vigile] = solver.Constraint(-solver.infinity(), 1, "constr_una_notte_settimana({})_vigile({})".format(settimana, vigile))
-		for i in range(7):
-			curr_giorno = giorno + i
-			constr_notti_settimana_vigile[settimana][vigile].SetCoefficient(var_notti[curr_giorno][vigile], 1)
+		if not DB[vigile].esente_notti():
+			constr_notti_settimana_vigile[settimana][vigile] = solver.Constraint(-solver.infinity(), 1, "constr_una_notte_settimana({})_vigile({})".format(settimana, vigile))
+			for i in range(7):
+				curr_giorno = giorno + i
+				constr_notti_settimana_vigile[settimana][vigile].SetCoefficient(var_notti[curr_giorno][vigile], 1)
 
 	squadra = (squadra % num_squadre) + 1
 	giorno += 7
@@ -157,6 +161,12 @@ for vigile in vigili:
 	# for festivo in var_festivi.keys():
 		# constr_festivi_vigile[gruppo].SetCoefficient(var_festivi[festivo][gruppo], 1)
 		
+	#CONSTR: max 3 notti per comandante e vice
+	if DB[vigile].grado in ["Comandante", "Vicecomandante"]:
+		constr_notti_comandanti[vigile] = solver.Constraint(0, 3, "constr_notti_comandanti({})".format(vigile))
+		for giorno in range(len(var_notti.keys())):
+			constr_notti_comandanti[vigile].SetCoefficient(var_notti[giorno][vigile], 1)
+		
 	#CONSTR: max 1 tra festivo e notti circostanti
 	constr_festivi_notti_circostanti_vigile[vigile] = {}
 	for festivo in var_festivi.keys():
@@ -177,7 +187,7 @@ for vigile in vigili:
 		if giorno == compleanno:
 			mult = 2 #Servizi fatti il giorno di compleanno "valgono" il doppio
 		if vigile in var_notti[giorno].keys():
-			if giorno_squadra[giorno] == DB[vigile].squadra:
+			if giorno_squadra[giorno] == DB[vigile].squadra or DB[vigile].squadra == 0:
 				constr_servizi_vigile[vigile].SetCoefficient(var_notti[giorno][vigile], 1 * mult) # Notti di squadra contano 1
 			else:
 				constr_servizi_vigile[vigile].SetCoefficient(var_notti[giorno][vigile], 2 * mult) # Notti NON di squadra contano il doppio
@@ -203,8 +213,8 @@ for i in range(len(vigili)):
 		constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v2], 1)
 			
 # TIME LIMIT
-# solver.SetTimeLimit(300000) #ms
-solver.SetTimeLimit(60000) #ms
+solver.SetTimeLimit(300000) #ms
+# solver.SetTimeLimit(60000) #ms
 
 # OBJECTIVE
 objective = solver.Objective()
@@ -235,7 +245,7 @@ else:
 	print('Funzione obiettivo =', solver.Objective().Value())
 	print("* Servizi per vigile:")
 	for vigile in vigili:
-		print("Vigile {}: {}".format(vigile, int(var_servizi_vigile[vigile].solution_value())))
+		print("Vigile {}: {}".format(vigile, float(var_servizi_vigile[vigile].solution_value())))
 	# Salva i turni calcolati in un CSV
 	out = open("./turni_{}.csv".format(anno), "w")
 	out.write("#Data;Notte;Sabato/Festivo\n")

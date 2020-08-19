@@ -15,31 +15,29 @@ class Vigile:
 		self.cognome = args[0][1]
 		self.data_di_nascita = datetime.strptime(args[0][2], '%d/%m/%Y').date()
 		self.grado = args[0][3]
-		self.autista = args[0][4]=="Si"
-		if self.grado in ["Vigile", "Caposquadra", "Capoplotone"]:
-			self.squadra = int(args[0][5])
-		self.gruppo_festivo = int(args[0][6])
+		self.squadra = int(args[0][4])
+		self.gruppo_festivo = int(args[0][5])
 
 	def __str__(self): # Called by print()
-		return "Vigile({}, {}, {}, {}, Autista:{}, Squadra:{})".format(
+		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
 				self.nome, 
 				self.cognome, 
 				self.data_di_nascita.strftime('%d/%m/%Y'), 
 				self.grado, 
-				self.autista, 
-				self.squadra
+				self.squadra,
+				self.gruppo_festivo
 				)
 
 	def __repr__(self):
 		return self.__str__()
 
-	def get_offset_compleanno(self, offset=0):
-		yday = d.toordinal() - date(d.year, 1, 1).toordinal() # Day number within the current year starting with 0 for January 1st
-		return yday - offset
+	def esente_notti(self):
+		if self.grado == "Aspirante":
+			return True
+		return False
 
-	def is_autista(self):
-		return self.autista
-
+	def esente_diurni(self):
+		return False
 
 def read_csv_vigili(filename="./vigili.csv"):
 	data = {}
