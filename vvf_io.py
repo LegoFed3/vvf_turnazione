@@ -7,17 +7,18 @@ class Vigile:
 	grado = "Vigile"
 	autista = False
 	squadra = 0
+	gruppo_festivo = 0
+	
 	
 	def __init__(self, *args):
 		self.nome = args[0][0]
 		self.cognome = args[0][1]
-		self.data_di_nascita = datetime.strptime(args[0][2], '%d/%m/%Y')
+		self.data_di_nascita = datetime.strptime(args[0][2], '%d/%m/%Y').date()
 		self.grado = args[0][3]
 		self.autista = args[0][4]=="Si"
 		if self.grado in ["Vigile", "Caposquadra", "Capoplotone"]:
 			self.squadra = int(args[0][5])
-		else:
-			self.squadra = 0
+		self.gruppo_festivo = int(args[0][6])
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Autista:{}, Squadra:{})".format(
