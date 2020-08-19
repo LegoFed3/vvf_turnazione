@@ -1,25 +1,33 @@
 from __future__ import print_function
 from ortools.linear_solver import pywraplp
+import datetime as dt
 import vvf_io
 
-DB = vvf_io.read_csv_vigili()
+anno = 2021
+giorno_inizio = 15
+giorno_fine = 14
+squadra_di_partenza = 1
 
-print("Input data:")
+DB = vvf_io.read_csv_vigili()
 vigili = list(DB.keys())
 vigili_autisti = list(i for i in DB.keys() if DB[i].is_autista())
 vigili_squadra = {}
-num_squadre = 4
-for i in range(num_squadre):
-	squadra = i + 1
-	vigili_squadra[squadra] = list(i for i in DB.keys() if DB[i].squadra==squadra)
+for vigile in vigili:
+	if DB[vigile].squadra == 0:
+		continue
+	elif DB[vigile].squadra not in vigili_squadra.keys():
+		vigili_squadra[DB[vigile].squadra] = []
+	vigili_squadra[DB[vigile].squadra].append(vigile)
 
-num_giorni = 365
-giorni_festivi_speciali = [100, 350]
+num_squadre = len(vigili_squadra.keys())
+data_inizio = dt.date(anno, 1, giorno_inizio)
+data_fine = dt.date(anno+1, 1, giorno_fine)
+num_giorni = (data_fine - data_inizio).days
+giorni_festivi_speciali = [
+	dt.date(anno,8,15), #Ferragosto
+	dt.date(anno,12,25), #Natale
+	]
 
-print("* Vigili: ", vigili)
-print("* Squadre: ", vigili_squadra)
-print("* Festivi speciali: ", giorni_festivi_speciali)
-	
 #Collections
 var_notti = {}
 constr_notti = {}
@@ -45,15 +53,16 @@ constr_differenza_servizi = {}
 solver = pywraplp.Solver('VVF_turni', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 
 #Solver Parameters
-solver.EnableOutput()
+# solver.EnableOutput()
 solver.SetNumThreads(2)
 
 print("Creating model...")
 giorno = 0
-squadra = 1
+squadra = squadra_di_partenza
 while giorno < num_giorni or squadra != (num_squadre - 1):
 	for i in range(7):
 		curr_giorno = giorno + i
+		curr_data = data_inizio + dt.timedelta(curr_giorno)
 
 		#VAR: vigili di squadra candidati per la notte
 		var_notti[curr_giorno] = {}
@@ -66,7 +75,8 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 			constr_notti[curr_giorno].SetCoefficient(var, 1)
 			
 		#SABATO
-		if i == 1 and curr_giorno not in giorni_festivi_speciali:
+		# if i == 1 and curr_giorno not in giorni_festivi_speciali:
+		if curr_data.weekday() == 5 and curr_data not in giorni_festivi_speciali:
 
 			#VAR: vigile candidati per il sabato
 			var_sabati[curr_giorno] = {}
@@ -79,7 +89,8 @@ while giorno < num_giorni or squadra != (num_squadre - 1):
 				constr_sabati[curr_giorno].SetCoefficient(var_sabati[curr_giorno][vigile], 1)
 
 		#FESTIVO
-		if i == 2 or curr_giorno in giorni_festivi_speciali:
+		# if i == 2 or curr_giorno in giorni_festivi_speciali:
+		if curr_data.weekday() == 6 or curr_data in giorni_festivi_speciali:
 			
 			#VAR: vigili candidati per il festivo
 			var_festivi[curr_giorno] = {}
@@ -153,7 +164,6 @@ for vigile in vigili:
 		if giorno in var_festivi.keys():
 			constr_servizi_vigile[vigile].SetCoefficient(var_festivi[giorno][vigile], 1) #2) #)
 
-print("Creating auxiliary variables...")
 #CONSTR: max 1 servizio di differenza tra ogni coppia di vigili
 for i in range(len(vigili)):
 	v1 = vigili[i]
@@ -171,7 +181,8 @@ for i in range(len(vigili)):
 		constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(var_servizi_vigile[v2], 1)
 			
 # TIME LIMIT
-solver.SetTimeLimit(300000) #ms
+# solver.SetTimeLimit(300000) #ms
+solver.SetTimeLimit(60000) #ms
 
 # OBJECTIVE
 objective = solver.Objective()
@@ -200,25 +211,26 @@ else:
 		print("WARNING: solution is not optimal.")
 	print('Solution:')
 	print('Objective value =', solver.Objective().Value())
-	print("* Notti:")
-	for giorno in range(len(var_notti.keys())):
-		for vigile in var_notti[giorno].keys():
-			if var_notti[giorno][vigile].solution_value() == 1:
-				print("Notte {} - Vigile {}".format(giorno, vigile))
-	print("* Sabati:")
-	for sabato in var_sabati.keys():
-		for vigile in vigili:
-			if var_sabati[sabato][vigile].solution_value() == 1:
-				print("Sabato {} - Vigile {}".format(sabato, vigile))
-	print("* Festivi:")
-	for festivo in var_festivi.keys():
-		vigili_festivo = []
-		for vigile in vigili:
-			if var_festivi[festivo][vigile].solution_value() == 1:
-				vigili_festivo.append(vigile)
-		print("Festivo {} - Vigili: {}".format(festivo, vigili_festivo))
 	print("* Servizi per vigile:")
 	for vigile in vigili:
 		print("Vigile {}: {}".format(vigile, int(var_servizi_vigile[vigile].solution_value())))
-		# print("Vigile {}: {}".format(vigile, var_servizi_vigile[vigile].solution_value()))
-	#TODO	
+	# Salva i turni calcolati in un CSV
+	out = open("./turni_{}.csv".format(anno), "w")
+	out.write("#Data;Notte;Sabato/Festivo\n")
+	for giorno in range(len(var_notti.keys())):
+		data = data_inizio + dt.timedelta(giorno)
+		line = str(data)+";"
+		for vigile in var_notti[giorno].keys():
+			if var_notti[giorno][vigile].solution_value() == 1:
+				line += DB[vigile].nome+" "+DB[vigile].cognome+";"
+		if giorno in var_sabati.keys():
+			for vigile in vigili:
+				if var_sabati[giorno][vigile].solution_value() == 1:
+					line += DB[vigile].nome+" "+DB[vigile].cognome+";"
+		elif giorno in var_festivi.keys():
+			for vigile in vigili:
+				if var_festivi[giorno][vigile].solution_value() == 1:
+					line += DB[vigile].nome+" "+DB[vigile].cognome+";"
+		out.write(line+"\n")
+	# TODO Riporta i servizi speciali
+	out.close()	

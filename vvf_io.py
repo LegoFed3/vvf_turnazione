@@ -16,6 +16,8 @@ class Vigile:
 		self.autista = args[0][4]=="Si"
 		if self.grado in ["Vigile", "Caposquadra", "Capoplotone"]:
 			self.squadra = int(args[0][5])
+		else:
+			self.squadra = 0
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Autista:{}, Squadra:{})".format(
