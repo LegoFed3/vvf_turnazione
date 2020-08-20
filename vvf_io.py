@@ -16,6 +16,8 @@ class Vigile:
 		self.data_di_nascita = dt.datetime.strptime(args[0][2], '%d/%m/%Y').date()
 		self.grado = args[0][3]
 		self.squadra = int(args[0][4])
+		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
+			self.squadra = 0
 		self.gruppo_festivo = int(args[0][5])
 
 	def __str__(self): # Called by print()
@@ -36,7 +38,9 @@ class Vigile:
 			return True
 		return False
 
-	def esente_diurni(self):
+	def esente_sabati(self):
+		if self.grado == "Aspirante":
+			return True
 		return False
 
 	def get_compleanno_offset(self, data_inizio):

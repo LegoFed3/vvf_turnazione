@@ -19,3 +19,4 @@ model = vvf_turnazione.VVF_Turnazione(data_inizio, data_fine, squadra_di_partenz
 model.solve(time_limit, verbose)
 
 model.print_solution()
+model.save_solution()
