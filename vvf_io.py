@@ -1,9 +1,9 @@
-from datetime import datetime
+import datetime as dt
 
 class Vigile:
 	nome = ""
 	cognome = ""
-	data_di_nascita = datetime(1900, 1, 1)
+	data_di_nascita = dt.datetime(1900, 1, 1)
 	grado = "Vigile"
 	autista = False
 	squadra = 0
@@ -13,7 +13,7 @@ class Vigile:
 	def __init__(self, *args):
 		self.nome = args[0][0]
 		self.cognome = args[0][1]
-		self.data_di_nascita = datetime.strptime(args[0][2], '%d/%m/%Y').date()
+		self.data_di_nascita = dt.datetime.strptime(args[0][2], '%d/%m/%Y').date()
 		self.grado = args[0][3]
 		self.squadra = int(args[0][4])
 		self.gruppo_festivo = int(args[0][5])
@@ -38,6 +38,14 @@ class Vigile:
 
 	def esente_diurni(self):
 		return False
+
+	def get_compleanno_offset(self, data_inizio):
+		if self.data_di_nascita.month <= data_inizio.month and self.data_di_nascita.day < data_inizio.day:
+			compleanno = dt.date(data_inizio.year + 1, self.data_di_nascita.month, self.data_di_nascita.day)
+		else:
+			compleanno = dt.date(data_inizio.year, self.data_di_nascita.month, self.data_di_nascita.day)
+		offset = (compleanno - data_inizio).days
+		return offset
 
 def read_csv_vigili(filename="./vigili.csv"):
 	data = {}
