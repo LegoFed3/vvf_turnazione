@@ -24,6 +24,8 @@ class VVF_Turnazione:
 
 	var_servizi_vigile = {}
 	constr_servizi_vigile = {}
+	var_cost_servizi_vigile = {}
+	constr_cost_servizi_vigile = {}
 	constr_notti_comandanti = {}
 	constr_festivi_comandanti = {}
 	var_differenza_servizi = {}
@@ -199,14 +201,26 @@ class VVF_Turnazione:
 			self.constr_servizi_vigile[vigile].SetCoefficient(self.var_servizi_vigile[vigile], -1)
 			for giorno in range(len(self.var_notti.keys())):
 				if vigile in self.var_notti[giorno].keys():
-					if self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0:
-						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1) # Notti di squadra contano 1
-					else:
-						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2.1) # Notti NON di squadra contano il doppio
+					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 				if giorno in self.var_sabati.keys() and not self.DB[vigile].esente_sabati():
 					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
 				if giorno in self.var_festivi.keys() and gruppo != 0:
-					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1.01) # Base 1.01 per evitare di scambiare notti con festivi
+					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1)
+
+			#VAR: costo servizi per vigile (ausiliaria)
+			self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_cost_servizi_vigile({})".format(vigile))
+			self.constr_cost_servizi_vigile[vigile] = self.solver.Constraint(0, 0, "constr_costo_servizi_vigile({})".format(vigile))
+			self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
+			for giorno in range(len(self.var_notti.keys())):
+				if vigile in self.var_notti[giorno].keys():
+					if self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0:
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1) # Notti di squadra contano 1
+					else:
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2.1) # Notti NON di squadra contano il doppio
+				if giorno in self.var_sabati.keys() and not self.DB[vigile].esente_sabati():
+					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
+				if giorno in self.var_festivi.keys() and gruppo != 0:
+					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1.01) # Base 1.01 per evitare di scambiare notti con festivi
 
 		for i in range(len(self.vigili)):
 			v1 = self.vigili[i]
@@ -229,7 +243,7 @@ class VVF_Turnazione:
 		#OBJ: minimizza le differenze tra servizi ed il costo totale dei servizi
 		for var in self.var_differenza_servizi.values():
 			objective.SetCoefficient(var, 1)
-		for var in self.var_servizi_vigile.values():
+		for var in self.var_cost_servizi_vigile.values():
 			objective.SetCoefficient(var, 1)
 		objective.SetMinimization()
 
@@ -261,7 +275,7 @@ class VVF_Turnazione:
 			print('* Funzione obiettivo =', self.solver.Objective().Value())
 			print("* Servizi per vigile:")
 			for vigile in self.vigili:
-				print("Vigile {}: {}".format(vigile, float(self.var_servizi_vigile[vigile].solution_value())))
+				print("Vigile {}: {}".format(vigile, int(self.var_servizi_vigile[vigile].solution_value())))
 
 	def save_solution(self):
 		if self.status == pywraplp.Solver.INFEASIBLE:
