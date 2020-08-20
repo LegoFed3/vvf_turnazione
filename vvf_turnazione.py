@@ -244,7 +244,7 @@ class VVF_Turnazione:
 		for var in self.var_differenza_servizi.values():
 			objective.SetCoefficient(var, 1)
 		for var in self.var_cost_servizi_vigile.values():
-			objective.SetCoefficient(var, 1)
+			objective.SetCoefficient(var, 100)
 		objective.SetMinimization()
 
 		print("Il modello ha {} variabili e {} vincoli.".format(self.solver.NumVariables(), self.solver.NumConstraints()))
@@ -261,7 +261,7 @@ class VVF_Turnazione:
 		self.solver.SetNumThreads(2)
 		# TIME LIMIT
 		self.solver.SetTimeLimit(time_limit) #ms
-		print("Risolvo il modello...")
+		print("Risolvo il modello... (max {}s)".format(int(float(time_limit)/1000)))
 		self.status = self.solver.Solve()
 
 	def print_solution(self):

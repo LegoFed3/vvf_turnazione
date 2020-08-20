@@ -8,8 +8,7 @@ class Vigile:
 	autista = False
 	squadra = 0
 	gruppo_festivo = 0
-	
-	
+
 	def __init__(self, *args):
 		self.nome = args[0][0]
 		self.cognome = args[0][1]
