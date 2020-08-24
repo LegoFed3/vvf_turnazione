@@ -42,6 +42,16 @@ class Vigile:
 			return True
 		return False
 
+	def aspirante(self):
+		if self.grado == "Aspirante":
+			return True
+		return False
+
+	def graduato(self):
+		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]:
+			return True
+		return False
+
 	def get_compleanno_offset(self, data_inizio):
 		if self.data_di_nascita.month <= data_inizio.month and self.data_di_nascita.day < data_inizio.day:
 			compleanno = dt.date(data_inizio.year + 1, self.data_di_nascita.month, self.data_di_nascita.day)
