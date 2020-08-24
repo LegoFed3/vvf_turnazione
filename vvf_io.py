@@ -1,5 +1,21 @@
 import datetime as dt
 
+GRADI_VALIDI = [
+	"Comandante",
+	"Vicecomandante",
+	"Capoplotone",
+	"Caposquadra",
+	"Vigile",
+	"Aspirante",
+	"Segretario",
+	"Cassiere",
+	"Magazziniere",
+	"Vicemagazziniere",
+	"Resp. Allievi",
+	"Ispettore",
+	"Presidente",
+	]
+
 class Vigile:
 	nome = ""
 	cognome = ""
@@ -14,6 +30,8 @@ class Vigile:
 		self.cognome = args[0][1]
 		self.data_di_nascita = dt.datetime.strptime(args[0][2], '%d/%m/%Y').date()
 		self.grado = args[0][3]
+		if self.grado not in GRADI_VALIDI:
+			print("ERRORE! Grado sconosciuto: ", self.grado)
 		self.squadra = int(args[0][4])
 		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
 			self.squadra = 0
@@ -33,12 +51,12 @@ class Vigile:
 		return self.__str__()
 
 	def esente_notti(self):
-		if self.grado == "Aspirante":
+		if self.grado in ["Ispettore", "Presidente"]:
 			return True
 		return False
 
 	def esente_sabati(self):
-		if self.grado == "Aspirante":
+		if self.grado in ["Ispettore", "Presidente"]:
 			return True
 		return False
 
