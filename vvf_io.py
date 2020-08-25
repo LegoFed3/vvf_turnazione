@@ -16,6 +16,11 @@ GRADI_VALIDI = [
 	"Presidente",
 	]
 
+ECCEZIONI_VALIDE = [
+	"", # Nessun eccezione
+	"NottiSoloSabato",
+	]
+
 class Vigile:
 	nome = ""
 	cognome = ""
@@ -24,6 +29,7 @@ class Vigile:
 	autista = False
 	squadra = 0
 	gruppo_festivo = 0
+	eccezioni = []
 
 	def __init__(self, *args):
 		self.nome = args[0][0]
@@ -36,6 +42,10 @@ class Vigile:
 		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
 			self.squadra = 0
 		self.gruppo_festivo = int(args[0][5])
+		self.eccezioni = args[0][6].split(",")
+		for e in self.eccezioni:
+			if e not in ECCEZIONI_VALIDE:
+				print("ERRORE: eccezione sconosciuta ", e)
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -86,7 +96,7 @@ def read_csv_vigili(filename="./vigili.csv"):
 			continue
 		else:
 			line = line.strip("\n\r").split(";")
-			line = list(filter(lambda x: x != '', line))
+			# line = list(filter(lambda x: x != '', line))
 			if len(line) > 0:
 				data[int(line[0])] = Vigile(line[1:])
 	fi.close()
