@@ -44,6 +44,11 @@ class VVF_Turnazione:
 	constr_sabati_minimi_aspiranti = {}
 
 	constr_ex_notti_solo_sabato = {}
+	constr_ex_notti_solo_sabato_festivi = {}
+	constr_ex_notti_solo_lun = {}
+	constr_ex_notti_solo_mar_ven = {}
+	constr_ex_servizi_primi_6_mesi = {}
+	constr_ex_no_servizi_mese = {}
 
 	var_differenza_servizi = {}
 	constr_differenza_servizi = {}
@@ -69,6 +74,9 @@ class VVF_Turnazione:
 
 	def get_weekday(self, offset):
 		return self.get_data(offset).weekday()
+
+	def get_offset(self, data):
+		return (data - self.data_inizio).days
 
 	def __init__(self, data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, loose=False, compute_aspiranti=True):
 		print("Creo il modello...")
@@ -96,7 +104,7 @@ class VVF_Turnazione:
 		self.anno = data_inizio.year
 		self.giorno_inizio = data_inizio.day
 		self.giorno_fine = data_fine.day
-		self.num_giorni = (data_fine - data_inizio).days
+		self.num_giorni = self.get_offset(data_fine)
 		giorno = 0
 		curr_squadra = squadra_di_partenza
 		while giorno < self.num_giorni:
@@ -192,7 +200,7 @@ class VVF_Turnazione:
 					self.constr_sabati_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 				#CONSTR: max 1 tra venerdì notte, sabato e sabato notte
-				if "NottiSoloSabato" not in self.DB[vigile].eccezioni:
+				if "NottiSoloSabato" not in self.DB[vigile].eccezioni and "NottiSoloSabatoFestivi" not in self.DB[vigile].eccezioni:
 					self.constr_sabati_notti_circostanti_vigile[vigile] = {}
 					for sabato in self.var_sabati.keys():
 						self.constr_sabati_notti_circostanti_vigile[vigile][sabato] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_sabato_notte_consecutivi_vigile({})_sabato({})".format(vigile, sabato))
@@ -206,7 +214,7 @@ class VVF_Turnazione:
 			#CONSTR: max 1 tra festivo e notti circostanti
 			self.constr_festivi_notti_circostanti_vigile[vigile] = {}
 			for festivo in self.var_festivi.keys():
-				if "NottiSoloSabato" not in self.DB[vigile].eccezioni or self.get_weekday(festivo) not in [5, 6]:
+				if "NottiSoloSabato" not in self.DB[vigile].eccezioni and ( "NottiSoloSabatoFestivi" not in self.DB[vigile].eccezioni or self.get_weekday(festivo) not in [5, 6]):
 					self.constr_festivi_notti_circostanti_vigile[vigile][festivo] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_festivo_notte_consecutivi_vigile({})_festivo({})".format(vigile, festivo))
 					self.constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(self.var_festivi[festivo][gruppo], 1)
 					if vigile in self.var_notti[festivo].keys():
@@ -299,6 +307,57 @@ class VVF_Turnazione:
 					for giorno in self.var_notti.keys():
 						if vigile in self.var_notti[giorno] and self.get_weekday(giorno) != 5:
 							self.constr_ex_notti_solo_sabato[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+
+				#CONSTR_EX: notti solo il sabato o festivi
+				if "NottiSoloSabatoFestivi" in self.DB[vigile].eccezioni:
+					self.constr_ex_notti_solo_sabato_festivi[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_notti_solo_sabato_festivi_vigile({})".format(vigile))
+					for giorno in self.var_notti.keys():
+						if vigile in self.var_notti[giorno] and self.get_weekday(giorno) != 5 and giorno not in self.var_festivi.keys():
+							self.constr_ex_notti_solo_sabato_festivi[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+
+				#CONSTR_EX: notti solo il lunedì
+				if "NottiSoloLun" in self.DB[vigile].eccezioni:
+					self.constr_ex_notti_solo_lun[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_notti_solo_lun_vigile({})".format(vigile))
+					for giorno in self.var_notti.keys():
+						if vigile in self.var_notti[giorno] and self.get_weekday(giorno) != 0:
+							self.constr_ex_notti_solo_lun[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+
+				#CONSTR_EX: notti solo il martedì o venerdì
+				if "NottiSoloMarVen" in self.DB[vigile].eccezioni:
+					self.constr_ex_notti_solo_mar_ven[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_notti_solo_mar_ven_vigile({})".format(vigile))
+					for giorno in self.var_notti.keys():
+						if vigile in self.var_notti[giorno] and self.get_weekday(giorno) not in [1, 4]:
+							self.constr_ex_notti_solo_mar_ven[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+
+				#CONSTR_EX: servizi solo i primi 6 mesi
+				if "ServiziSoloPrimi6Mesi" in self.DB[vigile].eccezioni:
+					self.constr_ex_servizi_primi_6_mesi[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_servizi_primi_6_mesi_vigile({})".format(vigile))
+					limite = self.get_offset(dt.date(self.anno, 6, 30))
+					for giorno in range(limite, self.num_giorni):
+						if vigile in self.var_notti[giorno]:
+							self.constr_ex_servizi_primi_6_mesi[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+						if giorno in self.var_sabati.keys():
+							if vigile in self.var_sabati[giorno]:
+								self.constr_ex_servizi_primi_6_mesi[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
+						elif giorno in self.var_festivi.keys():
+							self.constr_ex_servizi_primi_6_mesi[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1)
+
+				#CONSTR_EX: no servizi specifico mese
+				mesi_da_saltare = []
+				for e in self.DB[vigile].eccezioni:
+					if "NoServiziMese" in e:
+						mesi_da_saltare.append(int(e[len("NoServiziMese"):]))
+				if len(mesi_da_saltare) > 0:
+					self.constr_ex_no_servizi_mese[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_no_servizi_mese_vigile({})".format(vigile))
+					for giorno in self.var_notti[giorno]:
+						if self.get_data(giorno).month in mesi_da_saltare:
+							if vigile in self.var_notti[giorno]:
+								self.constr_ex_no_servizi_mese[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+							if giorno in self.var_sabati.keys():
+								if vigile in self.var_sabati[giorno]:
+									self.constr_ex_no_servizi_mese[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
+							elif giorno in self.var_festivi.keys():
+								self.constr_ex_no_servizi_mese[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1)
 
 			#VAR: somma servizi per vigile (ausiliaria)
 			self.var_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_sum_servizi_vigile({})".format(vigile))

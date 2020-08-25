@@ -19,6 +19,22 @@ GRADI_VALIDI = [
 ECCEZIONI_VALIDE = [
 	"", # Nessun eccezione
 	"NottiSoloSabato",
+	"NottiSoloSabatoFestivi",
+	"NottiSoloLun",
+	"NottiSoloMarVen",
+	"ServiziSoloPrimi6Mesi",
+	"NoServiziMese1",
+	"NoServiziMese2",
+	"NoServiziMese3",
+	"NoServiziMese4",
+	"NoServiziMese5",
+	"NoServiziMese6",
+	"NoServiziMese7",
+	"NoServiziMese8",
+	"NoServiziMese9",
+	"NoServiziMese10",
+	"NoServiziMese11",
+	"NoServiziMese12",
 	]
 
 class Vigile:
