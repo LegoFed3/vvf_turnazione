@@ -27,12 +27,14 @@ class VVF_Turnazione:
 	constr_festivi = {}
 	constr_festivi_vigile = {}
 	constr_festivi_notti_circostanti_vigile = {}
-	constr_compleanno_vigile = {}
+	constr_festivi_spaziati = {}
+	# constr_compleanno_vigile = {}
 
 	var_servizi_vigile = {}
 	constr_servizi_vigile = {}
 	var_cost_servizi_vigile = {}
 	constr_cost_servizi_vigile = {}
+
 	constr_notti_comandanti = {}
 	constr_festivi_comandanti = {}
 	constr_notti_capiplotone = {}
@@ -52,6 +54,8 @@ class VVF_Turnazione:
 
 	var_differenza_servizi = {}
 	constr_differenza_servizi = {}
+	var_differenza_costo_servizi = {}
+	constr_differenza_costo_servizi = {}
 	
 	DB = {}
 	vigili = []
@@ -223,16 +227,16 @@ class VVF_Turnazione:
 					if vigile in self.var_notti[giorno_prima].keys():
 						self.constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(self.var_notti[giorno_prima][vigile], 1)
 
-			#CONSTR: no servizi il giorno di compleanno
-			compleanno = self.DB[vigile].get_compleanno_offset(data_inizio)
-			self.constr_compleanno_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_compleanno_vigile({})".format(vigile))
-			if compleanno in self.var_notti.keys():
-				if vigile in self.var_notti[compleanno].keys():
-					self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_notti[compleanno][vigile], 1)
-			if compleanno in self.var_sabati.keys() and not (self.DB[vigile].esente_sabati() or self.DB[vigile].aspirante()):
-				self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_sabati[compleanno][vigile], 1)
-			if compleanno in self.var_festivi.keys() and gruppo != 0:
-				self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_festivi[compleanno][gruppo], 1)
+			#CONSTR: spazia i festivi di almeno 5 servizi per lato
+			if gruppo not in self.constr_festivi_spaziati.keys():
+				self.constr_festivi_spaziati[gruppo] = {}
+				lista_festivi = list(self.var_festivi.keys())
+				guardia = 5
+				for i, festivo in enumerate(lista_festivi):
+				# for i in range (guardia, len(lista_festivi)-guardia):
+					self.constr_festivi_spaziati[gruppo][i] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_festivi_spaziati_gruppo({})_festivo({})".format(gruppo, festivo))
+					for j in range(max(0, i-guardia), min(i+guardia, len(lista_festivi))):
+						self.constr_festivi_spaziati[gruppo][i].SetCoefficient(self.var_festivi[lista_festivi[j]][gruppo], 1)
 
 			#CONSTR: 3-5 festivi l'anno
 			if gruppo not in self.constr_festivi_vigile.keys():
@@ -359,8 +363,20 @@ class VVF_Turnazione:
 							elif giorno in self.var_festivi.keys():
 								self.constr_ex_no_servizi_mese[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1)
 
+			#CONSTR: no servizi il giorno di compleanno
+			# compleanno = self.DB[vigile].get_compleanno_offset(data_inizio)
+			# self.constr_compleanno_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_compleanno_vigile({})".format(vigile))
+			# if compleanno in self.var_notti.keys():
+				# if vigile in self.var_notti[compleanno].keys():
+					# self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_notti[compleanno][vigile], 1)
+			# if compleanno in self.var_sabati.keys() and not (self.DB[vigile].esente_sabati() or self.DB[vigile].aspirante()):
+				# self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_sabati[compleanno][vigile], 1)
+			# if compleanno in self.var_festivi.keys() and gruppo != 0:
+				# self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_festivi[compleanno][gruppo], 1)
+
 			#VAR: somma servizi per vigile (ausiliaria)
 			self.var_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_sum_servizi_vigile({})".format(vigile))
+			#CONSTR: implementa quanto sopra
 			self.constr_servizi_vigile[vigile] = self.solver.Constraint(0, 0, "constr_somma_servizi_vigile({})".format(vigile))
 			self.constr_servizi_vigile[vigile].SetCoefficient(self.var_servizi_vigile[vigile], -1)
 			for giorno in range(len(self.var_notti.keys())):
@@ -380,21 +396,25 @@ class VVF_Turnazione:
 			self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_cost_servizi_vigile({})".format(vigile))
 			self.constr_cost_servizi_vigile[vigile] = self.solver.Constraint(0, 0, "constr_costo_servizi_vigile({})".format(vigile))
 			self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
+			mult = 1
+			compleanno = self.DB[vigile].get_compleanno_offset(data_inizio)
 			for giorno in range(len(self.var_notti.keys())):
+				if giorno == compleanno:
+					mult = 2
 				if vigile in self.var_notti[giorno].keys():
 					if self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1) # Notti di squadra contano 1
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mult) # Notti di squadra contano 1
 					else:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2.1) # Notti NON di squadra contano il doppio
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2.1 * mult) # Notti NON di squadra contano il doppio
 				elif vigile in self.var_notti_aspiranti[giorno].keys() and compute_aspiranti:
-					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti_aspiranti[giorno][vigile], 1)
+					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti_aspiranti[giorno][vigile], 1 * mult)
 				if giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1 * mult)
 					elif vigile in self.var_sabati_aspiranti[giorno].keys() and compute_aspiranti:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati_aspiranti[giorno][vigile], 1)
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati_aspiranti[giorno][vigile], 1 * mult)
 				if giorno in self.var_festivi.keys() and gruppo != 0:
-					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1.01) # Base 1.01 per evitare di scambiare notti con festivi
+					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1.01 * mult) # Base 1.01 per evitare di scambiare notti con festivi
 
 		for i in range(len(self.vigili)):
 			v1 = self.vigili[i]
@@ -411,11 +431,24 @@ class VVF_Turnazione:
 				self.constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
 				self.constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(self.var_servizi_vigile[v1], -1)
 				self.constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(self.var_servizi_vigile[v2], 1)
+				#VAR: differenza costo servizi tra due vigili (ausiliaria)
+				self.var_differenza_costo_servizi[(v1, v2)] = self.solver.NumVar(-self.solver.infinity(), self.solver.infinity(), "var_aux_diff_costo_servizi({},{})".format(v1, v2))
+				#CONSTR: implementa quanto sopra (versione con costo servizi)
+				self.constr_differenza_costo_servizi[(v1, v2, '+')] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_diff_costo_servizi_plus_vigili({},{})".format(v1, v2))
+				self.constr_differenza_costo_servizi[(v1, v2, '+')].SetCoefficient(self.var_differenza_costo_servizi[(v1, v2)], -1)
+				self.constr_differenza_costo_servizi[(v1, v2, '+')].SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
+				self.constr_differenza_costo_servizi[(v1, v2, '+')].SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
+				self.constr_differenza_costo_servizi[(v1, v2, '-')] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_diff_costo_servizi_minus_vigili({},{})".format(v1, v2))
+				self.constr_differenza_costo_servizi[(v1, v2, '-')].SetCoefficient(self.var_differenza_costo_servizi[(v1, v2)], -1)
+				self.constr_differenza_costo_servizi[(v1, v2, '-')].SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
+				self.constr_differenza_costo_servizi[(v1, v2, '-')].SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
 
 		# OBJECTIVE
 		objective = self.solver.Objective()
 		#OBJ: minimizza le differenze tra servizi ed il costo totale dei servizi
 		for var in self.var_differenza_servizi.values():
+			objective.SetCoefficient(var, 1)
+		for var in self.var_differenza_costo_servizi.values():
 			objective.SetCoefficient(var, 1)
 		for var in self.var_cost_servizi_vigile.values():
 			objective.SetCoefficient(var, 100)
