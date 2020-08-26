@@ -481,7 +481,22 @@ class VVF_Turnazione:
 			print('* Funzione obiettivo =', self.solver.Objective().Value())
 			print("* Servizi per vigile:")
 			for vigile in self.vigili:
-				print("Vigile {}: {}".format(vigile, int(self.var_servizi_vigile[vigile].solution_value())))
+				line = "Vigile {} ({} {}): {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, int(self.var_servizi_vigile[vigile].solution_value()))
+				notti = 0
+				sabati = 0
+				festivi = 0
+				for giorno in self.var_notti.keys():
+					if vigile in self.var_notti[giorno].keys():
+						notti += int(self.var_notti[giorno][vigile].solution_value())
+				for giorno in self.var_sabati.keys():
+					if vigile in self.var_sabati[giorno].keys():
+						sabati += int(self.var_sabati[giorno][vigile].solution_value())
+				for giorno in self.var_festivi.keys():
+					gruppo = self.DB[vigile].gruppo_festivo
+					if gruppo in self.var_festivi[giorno].keys():
+						festivi += int(self.var_festivi[giorno][gruppo].solution_value())
+				line += "\n\tNotti: {}\n\tSabati: {}\n\tFestivi: {}".format(notti, sabati, festivi)
+				print(line)
 
 	def save_solution(self):
 		if self.status == pywraplp.Solver.INFEASIBLE:

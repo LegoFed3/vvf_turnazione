@@ -14,7 +14,7 @@ giorni_festivi_speciali = [
 vigili_fn = "./vigili.csv"
 time_limit = 300000 #ms
 verbose = True #False
-loose = False
+loose = True #False
 compute_aspiranti = False
 
 model = vvf_turnazione.VVF_Turnazione(data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, loose=loose, compute_aspiranti=compute_aspiranti)
