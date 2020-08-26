@@ -54,8 +54,6 @@ class VVF_Turnazione:
 
 	var_differenza_servizi = {}
 	constr_differenza_servizi = {}
-	var_differenza_costo_servizi = {}
-	constr_differenza_costo_servizi = {}
 	
 	DB = {}
 	vigili = []
@@ -68,6 +66,7 @@ class VVF_Turnazione:
 	num_giorni = 0
 	data_inizio = 0
 	data_fine = 0
+	printed_solution = False
 
 	#Model
 	solver = pywraplp.Solver('VVF_turni', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
@@ -431,24 +430,11 @@ class VVF_Turnazione:
 				self.constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
 				self.constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(self.var_servizi_vigile[v1], -1)
 				self.constr_differenza_servizi[(v1, v2, '-')].SetCoefficient(self.var_servizi_vigile[v2], 1)
-				#VAR: differenza costo servizi tra due vigili (ausiliaria)
-				self.var_differenza_costo_servizi[(v1, v2)] = self.solver.NumVar(-self.solver.infinity(), self.solver.infinity(), "var_aux_diff_costo_servizi({},{})".format(v1, v2))
-				#CONSTR: implementa quanto sopra (versione con costo servizi)
-				self.constr_differenza_costo_servizi[(v1, v2, '+')] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_diff_costo_servizi_plus_vigili({},{})".format(v1, v2))
-				self.constr_differenza_costo_servizi[(v1, v2, '+')].SetCoefficient(self.var_differenza_costo_servizi[(v1, v2)], -1)
-				self.constr_differenza_costo_servizi[(v1, v2, '+')].SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
-				self.constr_differenza_costo_servizi[(v1, v2, '+')].SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
-				self.constr_differenza_costo_servizi[(v1, v2, '-')] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_diff_costo_servizi_minus_vigili({},{})".format(v1, v2))
-				self.constr_differenza_costo_servizi[(v1, v2, '-')].SetCoefficient(self.var_differenza_costo_servizi[(v1, v2)], -1)
-				self.constr_differenza_costo_servizi[(v1, v2, '-')].SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
-				self.constr_differenza_costo_servizi[(v1, v2, '-')].SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
 
 		# OBJECTIVE
 		objective = self.solver.Objective()
 		#OBJ: minimizza le differenze tra servizi ed il costo totale dei servizi
 		for var in self.var_differenza_servizi.values():
-			objective.SetCoefficient(var, 1)
-		for var in self.var_differenza_costo_servizi.values():
 			objective.SetCoefficient(var, 1)
 		for var in self.var_cost_servizi_vigile.values():
 			objective.SetCoefficient(var, 100)
@@ -471,6 +457,7 @@ class VVF_Turnazione:
 		self.status = self.solver.Solve()
 
 	def print_solution(self):
+		self.printed_solution = True
 		if self.status == pywraplp.Solver.INFEASIBLE:
 			print('Il problema non ammette soluzione.')
 			print('Rilassa i vincoli e riprova.')
@@ -481,24 +468,23 @@ class VVF_Turnazione:
 			print('* Funzione obiettivo =', self.solver.Objective().Value())
 			print("* Servizi per vigile:")
 			for vigile in self.vigili:
-				line = "Vigile {} ({} {}): {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, int(self.var_servizi_vigile[vigile].solution_value()))
-				notti = 0
-				sabati = 0
-				festivi = 0
 				for giorno in self.var_notti.keys():
 					if vigile in self.var_notti[giorno].keys():
-						notti += int(self.var_notti[giorno][vigile].solution_value())
+						self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())
 				for giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
-						sabati += int(self.var_sabati[giorno][vigile].solution_value())
+						self.DB[vigile].sabati += int(self.var_sabati[giorno][vigile].solution_value())
 				for giorno in self.var_festivi.keys():
 					gruppo = self.DB[vigile].gruppo_festivo
 					if gruppo in self.var_festivi[giorno].keys():
-						festivi += int(self.var_festivi[giorno][gruppo].solution_value())
-				line += "\n\tNotti: {}\n\tSabati: {}\n\tFestivi: {}".format(notti, sabati, festivi)
+						self.DB[vigile].festivi += int(self.var_festivi[giorno][gruppo].solution_value())
+				line = "Vigile {} ({} {}, {}): {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, self.DB[vigile].grado, int(self.var_servizi_vigile[vigile].solution_value()))
+				line += "\n\tNotti: {}\n\tSabati: {}\n\tFestivi: {}".format(self.DB[vigile].notti, self.DB[vigile].sabati, self.DB[vigile].festivi)
 				print(line)
 
 	def save_solution(self):
+		if not self.printed_solution:
+			self.print_solution()
 		if self.status == pywraplp.Solver.INFEASIBLE:
 			return
 		else:
@@ -530,5 +516,7 @@ class VVF_Turnazione:
 					if self.var_notti_aspiranti[giorno][aspirante].solution_value() == 1 and compute_aspiranti:
 						line += self.DB[aspirante].nome+" "+self.DB[aspirante].cognome+";"
 				out.write(line+"\n")
-			# TODO Riporta i servizi speciali
+			out.close()
+			# Riporta i servizi speciali
+			out = open("./riporti_{}.csv".format(self.anno), "w")
 			out.close()

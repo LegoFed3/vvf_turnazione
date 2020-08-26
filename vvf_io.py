@@ -46,6 +46,9 @@ class Vigile:
 	squadra = 0
 	gruppo_festivo = 0
 	eccezioni = []
+	notti = 0
+	sabati = 0
+	festivi = 0
 
 	def __init__(self, *args):
 		self.nome = args[0][0]
