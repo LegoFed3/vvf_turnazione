@@ -42,6 +42,7 @@ class Vigile:
 	nome = ""
 	cognome = ""
 	data_di_nascita = dt.datetime(1900, 1, 1)
+	data_passaggio_vigile = dt.datetime(1900, 1, 1)
 	grado = "Vigile"
 	autista = False
 	squadra = 0
@@ -52,6 +53,7 @@ class Vigile:
 	festivi = 0
 	passato_fatto_servizio_oneroso = 0
 	passato_fatto_sabato = True
+	esente_CP = False
 
 	def __init__(self, *args):
 		self.nome = args[0][0]
@@ -64,10 +66,14 @@ class Vigile:
 		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
 			self.squadra = 0
 		self.gruppo_festivo = int(args[0][5])
-		self.eccezioni = args[0][6].split(",")
+		if args[0][6] in ["si", "Si", "SI"]:
+			self.esente_CP = True
+		self.eccezioni = args[0][7].split(",")
 		for e in self.eccezioni:
 			if e not in ECCEZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
+		if self.grado == "Aspirante" and len(args[0][8]) > 0:
+			self.data_passaggio_vigile = dt.datetime.strptime(args[0][8], '%d/%m/%Y').date()
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(

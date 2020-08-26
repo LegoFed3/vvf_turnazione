@@ -29,7 +29,7 @@ class VVF_Turnazione:
 	constr_festivi_vigile = {}
 	constr_festivi_notti_circostanti_vigile = {}
 	constr_festivi_spaziati = {}
-	# constr_compleanno_vigile = {}
+	constr_compleanno_vigile = {}
 
 	var_servizi_vigile = {}
 	constr_servizi_vigile = {}
@@ -82,7 +82,7 @@ class VVF_Turnazione:
 	def get_offset(self, data):
 		return (data - self.data_inizio).days
 
-	def __init__(self, data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, riporti_fn, loose=False, compute_aspiranti=True):
+	def __init__(self, data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, riporti_fn, loose=False, compute_aspiranti=True, no_servizi_compleanno=True):
 		print("Creo il modello...")
 		self.data_inizio = data_inizio
 		self.data_fine = data_fine
@@ -371,15 +371,16 @@ class VVF_Turnazione:
 								self.constr_ex_no_servizi_mese[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1)
 
 			#CONSTR: no servizi il giorno di compleanno
-			# compleanno = self.DB[vigile].get_compleanno_offset(data_inizio)
-			# self.constr_compleanno_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_compleanno_vigile({})".format(vigile))
-			# if compleanno in self.var_notti.keys():
-				# if vigile in self.var_notti[compleanno].keys():
-					# self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_notti[compleanno][vigile], 1)
-			# if compleanno in self.var_sabati.keys() and not (self.DB[vigile].esente_sabati() or self.DB[vigile].aspirante()):
-				# self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_sabati[compleanno][vigile], 1)
-			# if compleanno in self.var_festivi.keys() and gruppo != 0:
-				# self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_festivi[compleanno][gruppo], 1)
+			if no_servizi_compleanno:
+				compleanno = self.DB[vigile].get_compleanno_offset(data_inizio)
+				self.constr_compleanno_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_compleanno_vigile({})".format(vigile))
+				if compleanno in self.var_notti.keys():
+					if vigile in self.var_notti[compleanno].keys():
+						self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_notti[compleanno][vigile], 1)
+				if compleanno in self.var_sabati.keys() and not (self.DB[vigile].esente_sabati() or self.DB[vigile].aspirante()):
+					self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_sabati[compleanno][vigile], 1)
+				if compleanno in self.var_festivi.keys() and gruppo != 0:
+					self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_festivi[compleanno][gruppo], 1)
 
 			#VAR: somma servizi per vigile (ausiliaria)
 			self.var_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_sum_servizi_vigile({})".format(vigile))
@@ -404,15 +405,18 @@ class VVF_Turnazione:
 			self.constr_cost_servizi_vigile[vigile] = self.solver.Constraint(0, 0, "constr_costo_servizi_vigile({})".format(vigile))
 			self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
 			mult = 1
+			mult_esente_CP = 1
+			if self.DB[vigile].esente_CP:
+				mult_esente_CP = 2.0/3.0
 			compleanno = self.DB[vigile].get_compleanno_offset(data_inizio)
 			for giorno in range(len(self.var_notti.keys())):
 				if giorno == compleanno:
-					mult = 2
+					mult *= 2
 				if vigile in self.var_notti[giorno].keys():
 					if self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mult) # Notti di squadra contano 1
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mult * mult_esente_CP) # Notti di squadra contano 1
 					else:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2.1 * mult) # Notti NON di squadra contano il doppio
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2.1 * mult * mult_esente_CP) # Notti NON di squadra contano il doppio
 				elif vigile in self.var_notti_aspiranti[giorno].keys() and compute_aspiranti:
 					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti_aspiranti[giorno][vigile], 1 * mult)
 				if giorno in self.var_sabati.keys():
@@ -445,7 +449,7 @@ class VVF_Turnazione:
 		for var in self.var_differenza_servizi.values():
 			objective.SetCoefficient(var, 1)
 		for var in self.var_cost_servizi_vigile.values():
-			objective.SetCoefficient(var, 100)
+			objective.SetCoefficient(var, 1000)
 		objective.SetMinimization()
 
 		print("Il modello ha {} variabili e {} vincoli.".format(self.solver.NumVariables(), self.solver.NumConstraints()))
