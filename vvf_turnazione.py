@@ -245,8 +245,10 @@ class VVF_Turnazione:
 					for j in range(max(0, i-guardia), min(i+guardia, len(lista_festivi))):
 						self.constr_festivi_spaziati[gruppo][i].SetCoefficient(self.var_festivi[lista_festivi[j]][gruppo], 1)
 
-			#CONSTR: 3-5 festivi l'anno
+			#CONSTR: max 5 festivi l'anno
+			#NOTA: aggiungi un minimo di 3 per "forzare" una distribuzione più equa
 			if gruppo not in self.constr_festivi_vigile.keys():
+				# self.constr_festivi_vigile[gruppo] = self.solver.Constraint(-self.solver.infinity(), 5, "constr_festivi_annuali_vigile({})".format(gruppo))
 				self.constr_festivi_vigile[gruppo] = self.solver.Constraint(3, 5, "constr_festivi_annuali_vigile({})".format(gruppo))
 				for festivo in self.var_festivi.keys():
 					self.constr_festivi_vigile[gruppo].SetCoefficient(self.var_festivi[festivo][gruppo], 1)
@@ -398,7 +400,7 @@ class VVF_Turnazione:
 					elif vigile in self.var_sabati_aspiranti[giorno].keys() and compute_aspiranti:
 						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_sabati_aspiranti[giorno][vigile], 1)
 				if giorno in self.var_festivi.keys() and gruppo != 0:
-					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1)
+					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1.01) # 1.01 per favorire l'assegnazione dello stesso numero di festivi
 
 			#VAR: costo servizi per vigile (ausiliaria)
 			self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_cost_servizi_vigile({})".format(vigile))
@@ -425,7 +427,7 @@ class VVF_Turnazione:
 					elif vigile in self.var_sabati_aspiranti[giorno].keys() and compute_aspiranti:
 						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati_aspiranti[giorno][vigile], 1 * mult)
 				if giorno in self.var_festivi.keys() and gruppo != 0:
-					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1.01 * mult) # Base 1.01 per evitare di scambiare notti con festivi
+					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1 * mult)
 
 		for i in range(len(self.vigili)):
 			v1 = self.vigili[i]
