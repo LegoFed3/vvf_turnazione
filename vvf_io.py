@@ -41,8 +41,8 @@ ECCEZIONI_VALIDE = [
 class Vigile:
 	nome = ""
 	cognome = ""
-	data_di_nascita = dt.datetime(1900, 1, 1)
-	data_passaggio_vigile = dt.datetime(1900, 1, 1)
+	data_di_nascita = dt.date(1900, 1, 1)
+	data_passaggio_vigile = dt.date(1900, 1, 1)
 	grado = "Vigile"
 	autista = False
 	squadra = 0
@@ -54,6 +54,7 @@ class Vigile:
 	passato_fatto_servizio_oneroso = 0
 	passato_fatto_sabato = True
 	esente_CP = False
+	aspirante_passa_a_vigile = False
 
 	def __init__(self, *args):
 		self.nome = args[0][0]
@@ -99,7 +100,7 @@ class Vigile:
 		return False
 
 	def aspirante(self):
-		if self.grado == "Aspirante":
+		if self.grado == "Aspirante" and not self.aspirante_passa_a_vigile:
 			return True
 		return False
 
@@ -149,4 +150,10 @@ def read_csv_riporti(data, filename="./riporti.csv"):
 				data[int(line[0])].passato_fatto_sabato = bool(int(line[1]))
 				data[int(line[0])].passato_fatto_servizio_oneroso = int(line[2])
 	fi.close()
+	return data
+
+def correggi_aspiranti(data, data_inizio, data_fine):
+	for vigile in data.keys():
+		if data[vigile].grado == "Aspirante" and data[vigile].data_passaggio_vigile > data_inizio and data[vigile].data_passaggio_vigile < data_fine:
+			data[vigile].aspirante_passa_a_vigile = True
 	return data
