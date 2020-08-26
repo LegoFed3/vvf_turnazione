@@ -127,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Custom entries
 model.txt
 out
 turni_*.csv
+riporti*.csv

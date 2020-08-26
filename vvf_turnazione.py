@@ -20,6 +20,7 @@ class VVF_Turnazione:
 	constr_sabati = {}
 	constr_sabati_vigile = {}
 	constr_sabati_notti_circostanti_vigile = {}
+	constr_sabato_saltato_vigile = {}
 	var_sabati_aspiranti = {}
 	constr_sabati_aspiranti = {}
 
@@ -81,11 +82,12 @@ class VVF_Turnazione:
 	def get_offset(self, data):
 		return (data - self.data_inizio).days
 
-	def __init__(self, data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, loose=False, compute_aspiranti=True):
+	def __init__(self, data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, riporti_fn, loose=False, compute_aspiranti=True):
 		print("Creo il modello...")
 		self.data_inizio = data_inizio
 		self.data_fine = data_fine
 		self.DB = vvf_io.read_csv_vigili(vigili_fn)
+		self.DB = vvf_io.read_csv_riporti(self.DB, riporti_fn)
 		self.vigili = list(self.DB.keys())
 		self.vigili_squadra = {}
 		self.vigili_gruppi_festivo = {}
@@ -213,6 +215,12 @@ class VVF_Turnazione:
 						venerdi = sabato - 1
 						if vigile in self.var_notti[venerdi].keys():
 							self.constr_sabati_notti_circostanti_vigile[vigile][sabato].SetCoefficient(self.var_notti[venerdi][vigile], 1)
+
+				#CONSTR: almeno 1 sabato se non fatto l'anno precedente
+				if not self.DB[vigile].passato_fatto_sabato:
+					self.constr_sabato_saltato_vigile[vigile] = self.solver.Constraint(1, self.solver.infinity(), "constr_sabato_saltato_vigile({})".format(vigile))
+					for sabato in self.var_sabati.keys():
+						self.constr_sabato_saltato_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 			#CONSTR: max 1 tra festivo e notti circostanti
 			self.constr_festivi_notti_circostanti_vigile[vigile] = {}
@@ -519,4 +527,8 @@ class VVF_Turnazione:
 			out.close()
 			# Riporta i servizi speciali
 			out = open("./riporti_{}.csv".format(self.anno), "w")
+			out.write("#Vigile;FattoSabato;FattoServizioOnerosoAnniFa\n")
+			for vigile in self.vigili:
+				out.write("{};{};".format(vigile, self.DB[vigile].sabati))
+				out.write("{}\n".format(0)) #TODO
 			out.close()

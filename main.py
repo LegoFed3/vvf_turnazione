@@ -12,12 +12,13 @@ giorni_festivi_speciali = [
 	dt.date(data_inizio.year+1,1,6), #Epifania
 	]
 vigili_fn = "./vigili.csv"
+riporti_fn = "./riporti.csv"
 time_limit = 300000 #ms
-verbose = True #False
+verbose = False
 loose = False
 compute_aspiranti = False
 
-model = vvf_turnazione.VVF_Turnazione(data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, loose=loose, compute_aspiranti=compute_aspiranti)
+model = vvf_turnazione.VVF_Turnazione(data_inizio, data_fine, squadra_di_partenza, giorni_festivi_speciali, vigili_fn, riporti_fn, loose=loose, compute_aspiranti=compute_aspiranti)
 model.solve(time_limit, verbose)
 
 model.save_solution()

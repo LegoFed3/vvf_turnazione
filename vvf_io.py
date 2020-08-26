@@ -1,4 +1,5 @@
 import datetime as dt
+import os
 
 GRADI_VALIDI = [
 	"Comandante",
@@ -49,6 +50,8 @@ class Vigile:
 	notti = 0
 	sabati = 0
 	festivi = 0
+	passato_fatto_servizio_oneroso = 0
+	passato_fatto_sabato = True
 
 	def __init__(self, *args):
 		self.nome = args[0][0]
@@ -109,6 +112,10 @@ class Vigile:
 
 def read_csv_vigili(filename="./vigili.csv"):
 	data = {}
+	if not os.path.isfile(filename):
+		print("ERRORE: il file {} che descrive i vigili non esiste!".format(filename))
+		print("\tImpossibile continuare senza.")
+		exit(-1)
 	fi = open(filename, "r")
 	for line in fi:
 		if line[0] == "#":
@@ -118,5 +125,22 @@ def read_csv_vigili(filename="./vigili.csv"):
 			# line = list(filter(lambda x: x != '', line))
 			if len(line) > 0:
 				data[int(line[0])] = Vigile(line[1:])
+	fi.close()
+	return data
+
+def read_csv_riporti(data, filename="./riporti.csv"):
+	if not os.path.isfile(filename):
+		print("ATTENZIONE: il file {} che descrive i riporti dello scorso anno non esiste!".format(filename))
+		print("\tContinuo senza.")
+		return data
+	fi = open(filename, "r")
+	for line in fi:
+		if line[0] == "#":
+			continue
+		else:
+			line = line.strip("\n\r").split(";")
+			if len(line) > 0:
+				data[int(line[0])].passato_fatto_sabato = bool(int(line[1]))
+				data[int(line[0])].passato_fatto_servizio_oneroso = int(line[2])
 	fi.close()
 	return data
