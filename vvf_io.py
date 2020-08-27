@@ -128,7 +128,7 @@ class Vigile:
 		return self.notti + self.sabati + self.festivi
 
 def read_csv_vigili(filename="./vigili.csv"):
-	data = {}
+	db = {}
 	if not os.path.isfile(filename):
 		print("ERRORE: il file {} che descrive i vigili non esiste!".format(filename))
 		print("\tImpossibile continuare senza.")
@@ -141,15 +141,15 @@ def read_csv_vigili(filename="./vigili.csv"):
 			line = line.strip("\n\r").split(";")
 			# line = list(filter(lambda x: x != '', line))
 			if len(line) > 0:
-				data[int(line[0])] = Vigile(line[1:])
+				db[int(line[0])] = Vigile(line[1:])
 	fi.close()
-	return data
+	return db
 
-def read_csv_riporti(data, filename="./riporti.csv"):
+def read_csv_riporti(db, filename="./riporti.csv"):
 	if not os.path.isfile(filename):
 		print("ATTENZIONE: il file {} che descrive i riporti dello scorso anno non esiste!".format(filename))
 		print("\tContinuo senza.")
-		return data
+		return db
 	fi = open(filename, "r")
 	for line in fi:
 		if line[0] == "#":
@@ -157,18 +157,18 @@ def read_csv_riporti(data, filename="./riporti.csv"):
 		else:
 			line = line.strip("\n\r").split(";")
 			if len(line) > 0:
-				data[int(line[0])].passato_servizi_extra = int(line[1])
-				data[int(line[0])].passato_sabati = list(map(lambda x: int(x), line[2:7]))
-				data[int(line[0])].passato_servizi_onerosi = list(map(lambda x: int(x), line[7:11]))
+				db[int(line[0])].passato_servizi_extra = int(line[1])
+				db[int(line[0])].passato_sabati = list(map(lambda x: int(x), line[2:7]))
+				db[int(line[0])].passato_servizi_onerosi = list(map(lambda x: int(x), line[7:11]))
 	fi.close()
-	return data
+	return db
 
-def correggi_aspiranti(data, data_inizio, data_fine):
-	for vigile in data.keys():
+def correggi_aspiranti(db, data_inizio, data_fine):
+	for vigile in db.keys():
 		if (
-			data[vigile].grado == "Aspirante"
-			and data[vigile].data_passaggio_vigile > data_inizio
-			and data[vigile].data_passaggio_vigile < data_fine
+			db[vigile].grado == "Aspirante"
+			and db[vigile].data_passaggio_vigile > data_inizio
+			and db[vigile].data_passaggio_vigile < data_fine
 			):
-			data[vigile].aspirante_passa_a_vigile = True
-	return data
+			db[vigile].aspirante_passa_a_vigile = True
+	return db
