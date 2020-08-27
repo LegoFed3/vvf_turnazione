@@ -18,7 +18,7 @@ GRADI_VALIDI = [
 	]
 
 ECCEZIONI_VALIDE = [
-	"", # Nessun eccezione
+	"EsenteCP",
 	"NottiSoloSabato",
 	"NottiSoloSabatoFestivi",
 	"NottiSoloLun",
@@ -50,8 +50,8 @@ class Vigile:
 	NOTTI = 0
 	SABATI = 0
 	FESTIVI = 0
-	PASSATO_SERVIZI_ONEROSI = 0
-	PASSATO_SABATI = True
+	PASSATO_SERVIZI_ONEROSI = [0]*5
+	PASSATO_SABATI = [0]*5
 	PASSATO_SERVIZI_EXTRA = 0
 	ESENTE_CP = False
 	ASPIRANTE_PASSA_A_VIGILE = False
@@ -68,15 +68,17 @@ class Vigile:
 		if self.GRADO in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
 			self.SQUADRA = 0
 		self.GRUPPO_FESTIVO = int(args[0][5])
-		if args[0][6] in ["si", "Si", "SI"]:
-			self.ESENTE_CP = True
+		if self.GRADO == "Aspirante" and len(args[0][6]) > 0:
+			self.DATA_PASSAGGIO_VIGILE = dt.datetime.strptime(args[0][6], '%d/%m/%Y').date()
 		self.ECCEZIONI = args[0][7].split(",")
+		if '' in self.ECCEZIONI:
+			self.ECCEZIONI.remove('')
 		for e in self.ECCEZIONI:
 			if e not in ECCEZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
-		if self.GRADO == "Aspirante" and len(args[0][8]) > 0:
-			self.DATA_PASSAGGIO_VIGILE = dt.datetime.strptime(args[0][8], '%d/%m/%Y').date()
+			elif e == "EsenteCP":
+				self.ESENTE_CP = True
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -156,8 +158,8 @@ def read_csv_riporti(data, filename="./riporti.csv"):
 			line = line.strip("\n\r").split(";")
 			if len(line) > 0:
 				data[int(line[0])].PASSATO_SERVIZI_EXTRA = int(line[1])
-				data[int(line[0])].PASSATO_SABATI = bool(int(line[2]))
-				data[int(line[0])].PASSATO_SERVIZI_ONEROSI = int(line[3])
+				data[int(line[0])].PASSATO_SABATI = list(map(lambda x: int(x), line[2:7]))
+				data[int(line[0])].PASSATO_SERVIZI_ONEROSI = list(map(lambda x: int(x), line[7:11]))
 	fi.close()
 	return data
 

@@ -132,4 +132,4 @@ dmypy.json
 model.txt
 out
 turni_*.csv
-riporti*.csv
+riporti_*.csv
