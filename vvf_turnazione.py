@@ -91,23 +91,23 @@ class TurnazioneVVF:
 		self.DB = vvf_io.read_csv_riporti(self.DB, riporti_fn)
 		self.DB = vvf_io.correggi_aspiranti(self.DB, data_inizio, data_fine)
 		self.vigili = list(self.DB.keys())
-		self.vigili_SQUADRA = {}
-		self.vigili_GRUPPI_FESTIVO = {}
+		self.vigili_squadra = {}
+		self.vigili_gruppi_festivo = {}
 		for vigile in self.vigili:
 			# Squadra
 			if self.DB[vigile].squadra == 0:
 				continue
-			elif self.DB[vigile].squadra not in self.vigili_SQUADRA.keys():
-				self.vigili_SQUADRA[self.DB[vigile].squadra] = []
-			self.vigili_SQUADRA[self.DB[vigile].squadra].append(vigile)
+			elif self.DB[vigile].squadra not in self.vigili_squadra.keys():
+				self.vigili_squadra[self.DB[vigile].squadra] = []
+			self.vigili_squadra[self.DB[vigile].squadra].append(vigile)
 			# Gruppo Festivo
 			if self.DB[vigile].gruppo_festivo == 0:
 				continue
-			elif self.DB[vigile].gruppo_festivo not in self.vigili_GRUPPI_FESTIVO.keys():
-				self.vigili_GRUPPI_FESTIVO[self.DB[vigile].gruppo_festivo] = []
-			self.vigili_GRUPPI_FESTIVO[self.DB[vigile].gruppo_festivo].append(vigile)
+			elif self.DB[vigile].gruppo_festivo not in self.vigili_gruppi_festivo.keys():
+				self.vigili_gruppi_festivo[self.DB[vigile].gruppo_festivo] = []
+			self.vigili_gruppi_festivo[self.DB[vigile].gruppo_festivo].append(vigile)
 
-		num_squadre = len(self.vigili_SQUADRA.keys())
+		num_squadre = len(self.vigili_squadra.keys())
 		self.anno = self.data_inizio.year
 		num_giorni = self._getOffsetFromDate(self.data_fine)
 		giorno = 0
@@ -175,12 +175,12 @@ class TurnazioneVVF:
 					
 					#VAR: vigili candidati per il festivo
 					self.var_festivi[curr_giorno] = {}
-					for gruppo in self.vigili_GRUPPI_FESTIVO.keys():
+					for gruppo in self.vigili_gruppi_festivo.keys():
 						self.var_festivi[curr_giorno][gruppo] = self.Solver.IntVar(0, 1, "var_gruppo({})_festivo({})".format(gruppo, curr_giorno))
 						
 					#CONSTR: 1 gruppo festivo a festivo
 					self.constr_festivi[curr_giorno] = self.Solver.Constraint(1, 1, "constr_festivo({})".format(curr_giorno))
-					for gruppo in self.vigili_GRUPPI_FESTIVO.keys():
+					for gruppo in self.vigili_gruppi_festivo.keys():
 						self.constr_festivi[curr_giorno].SetCoefficient(self.var_festivi[curr_giorno][gruppo], 1)
 					
 			#CONSTR: max 1 notte per vigile a settimana
