@@ -1,6 +1,7 @@
 from __future__ import print_function
 from ortools.linear_solver import pywraplp
 import datetime as dt
+import math
 import vvf_io
 
 MAX_ASPIRANTI_AFFIANCATI = 3 #2
@@ -420,7 +421,9 @@ class VVF_Turnazione:
 
 			#VAR: costo servizi per vigile (ausiliaria)
 			self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_cost_servizi_vigile({})".format(vigile))
-			self.constr_cost_servizi_vigile[vigile] = self.solver.Constraint(0, 0, "constr_costo_servizi_vigile({})".format(vigile))
+			#CONSTR: implementa quanto sopra
+			#Il target è 0 se il vigile non ha fatto più servizi della media
+			self.constr_cost_servizi_vigile[vigile] = self.solver.Constraint(-2*self.DB[vigile].passato_servizi_extra, -2*self.DB[vigile].passato_servizi_extra, "constr_costo_servizi_vigile({})".format(vigile))
 			self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
 			mul_notti = 1
 			mul_sabati = 1
@@ -499,7 +502,7 @@ class VVF_Turnazione:
 			if self.status == pywraplp.Solver.FEASIBLE:
 				print("ATTENZIONE: la soluzione trovata potrebbe non essere ottimale.")
 			print('Soluzione:')
-			print('* Funzione obiettivo =', self.solver.Objective().Value())
+			print('* Funzione obiettivo: ', self.solver.Objective().Value())
 			print("* Servizi per vigile:")
 			for vigile in self.vigili:
 				for giorno in self.var_notti.keys():
@@ -515,13 +518,13 @@ class VVF_Turnazione:
 				line = "Vigile {} ({} {}, {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, self.DB[vigile].grado)
 				if self.DB[vigile].aspirante_passa_a_vigile:
 					line += "*"
-				line += "): {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, self.DB[vigile].grado, int(self.var_servizi_vigile[vigile].solution_value()))
+				line += "): {}".format(int(self.var_servizi_vigile[vigile].solution_value()))
 				line += "\n\tNotti: {}\n\tSabati: {}\n\tFestivi: {}".format(self.DB[vigile].notti, self.DB[vigile].sabati, self.DB[vigile].festivi)
 				print(line)
 
 	def save_solution(self):
 		if not self.printed_solution:
-			self.print_solution()
+			self.print_solution() #Necessaria per calcolare i numeri di servizi di ogni vigile
 		if self.status == pywraplp.Solver.INFEASIBLE:
 			return
 		else:
@@ -554,10 +557,31 @@ class VVF_Turnazione:
 						line += self.DB[aspirante].nome+" "+self.DB[aspirante].cognome+";"
 				out.write(line+"\n")
 			out.close()
-			# Riporta i servizi speciali
-			out = open("./riporti_{}.csv".format(self.anno), "w")
-			out.write("#Vigile;FattoSabato;FattoServizioOnerosoAnniFa\n")
+			# Calcola il numero medio di servizi svolti dai vigili senza vincoli
+			s = 0
+			i = 0
 			for vigile in self.vigili:
-				out.write("{};{};".format(vigile, self.DB[vigile].sabati))
+				if (
+					self.DB[vigile].grado == "Vigile" #Escludi altri gradi che hanno limitazioni
+					and not self.DB[vigile].esente_CP #Gli esenti fanno più servizi
+					and self.DB[vigile].eccezioni == ['']
+					):
+						s += self.DB[vigile].numero_servizi()
+						i += 1
+			media_servizi = float(s)/i
+			# Riporta il numero di servizi extra ed i servizi speciali
+			out = open("./riporti_{}.csv".format(self.anno), "w")
+			out.write("#Vigile;FattoServiziExtra;FattoSabato;FattoServiziOnerosi\n")
+			for vigile in self.vigili:
+				out.write("{};".format(vigile))
+				servizi_extra = 0
+				if (
+					self.DB[vigile].grado == "Vigile" #Escludi altri gradi che hanno limitazioni
+					and not self.DB[vigile].esente_CP #Gli esenti fanno più servizi
+					and self.DB[vigile].eccezioni == ['']
+					):
+						servizi_extra = math.ceil(self.DB[vigile].numero_servizi() - media_servizi)
+				out.write("{};".format(servizi_extra))
+				out.write("{};".format(self.DB[vigile].sabati))
 				out.write("{}\n".format(0)) #TODO
 			out.close()

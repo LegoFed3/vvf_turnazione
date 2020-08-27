@@ -53,6 +53,7 @@ class Vigile:
 	festivi = 0
 	passato_fatto_servizio_oneroso = 0
 	passato_fatto_sabato = True
+	passato_servizi_extra = 0
 	esente_CP = False
 	aspirante_passa_a_vigile = False
 
@@ -117,6 +118,9 @@ class Vigile:
 		offset = (compleanno - data_inizio).days
 		return offset
 
+	def numero_servizi(self):
+		return self.notti + self.sabati + self.festivi
+
 def read_csv_vigili(filename="./vigili.csv"):
 	data = {}
 	if not os.path.isfile(filename):
@@ -147,8 +151,9 @@ def read_csv_riporti(data, filename="./riporti.csv"):
 		else:
 			line = line.strip("\n\r").split(";")
 			if len(line) > 0:
-				data[int(line[0])].passato_fatto_sabato = bool(int(line[1]))
-				data[int(line[0])].passato_fatto_servizio_oneroso = int(line[2])
+				data[int(line[0])].passato_servizi_extra = int(line[1])
+				data[int(line[0])].passato_fatto_sabato = bool(int(line[2]))
+				data[int(line[0])].passato_fatto_servizio_oneroso = int(line[3])
 	fi.close()
 	return data
 
