@@ -39,87 +39,91 @@ ECCEZIONI_VALIDE = [
 	]
 
 class Vigile:
-	nome = ""
-	cognome = ""
-	data_di_nascita = dt.date(1900, 1, 1)
-	data_passaggio_vigile = dt.date(1900, 1, 1)
-	grado = "Vigile"
-	autista = False
-	squadra = 0
-	gruppo_festivo = 0
-	eccezioni = []
-	notti = 0
-	sabati = 0
-	festivi = 0
-	passato_fatto_servizio_oneroso = 0
-	passato_fatto_sabato = True
-	passato_servizi_extra = 0
-	esente_CP = False
-	aspirante_passa_a_vigile = False
+	NOME = ""
+	COGNOME = ""
+	DATA_DI_NASCITA = dt.date(1900, 1, 1)
+	DATA_PASSAGGIO_VIGILE = dt.date(1900, 1, 1)
+	GRADO = "Vigile"
+	SQUADRA = 0
+	GRUPPO_FESTIVO = 0
+	ECCEZIONI = []
+	NOTTI = 0
+	SABATI = 0
+	FESTIVI = 0
+	PASSATO_SERVIZI_ONEROSI = 0
+	PASSATO_SABATI = True
+	PASSATO_SERVIZI_EXTRA = 0
+	ESENTE_CP = False
+	ASPIRANTE_PASSA_A_VIGILE = False
 
 	def __init__(self, *args):
-		self.nome = args[0][0]
-		self.cognome = args[0][1]
-		self.data_di_nascita = dt.datetime.strptime(args[0][2], '%d/%m/%Y').date()
-		self.grado = args[0][3]
-		if self.grado not in GRADI_VALIDI:
-			print("ERRORE! Grado sconosciuto: ", self.grado)
-		self.squadra = int(args[0][4])
-		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
-			self.squadra = 0
-		self.gruppo_festivo = int(args[0][5])
+		self.NOME = args[0][0]
+		self.COGNOME = args[0][1]
+		self.DATA_DI_NASCITA = dt.datetime.strptime(args[0][2], '%d/%m/%Y').date()
+		self.GRADO = args[0][3]
+		if self.GRADO not in GRADI_VALIDI:
+			print("ERRORE! Grado sconosciuto: ", self.GRADO)
+			exit(-1)
+		self.SQUADRA = int(args[0][4])
+		if self.GRADO in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
+			self.SQUADRA = 0
+		self.GRUPPO_FESTIVO = int(args[0][5])
 		if args[0][6] in ["si", "Si", "SI"]:
-			self.esente_CP = True
-		self.eccezioni = args[0][7].split(",")
-		for e in self.eccezioni:
+			self.ESENTE_CP = True
+		self.ECCEZIONI = args[0][7].split(",")
+		for e in self.ECCEZIONI:
 			if e not in ECCEZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
-		if self.grado == "Aspirante" and len(args[0][8]) > 0:
-			self.data_passaggio_vigile = dt.datetime.strptime(args[0][8], '%d/%m/%Y').date()
+				exit(-1)
+		if self.GRADO == "Aspirante" and len(args[0][8]) > 0:
+			self.DATA_PASSAGGIO_VIGILE = dt.datetime.strptime(args[0][8], '%d/%m/%Y').date()
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
-				self.nome, 
-				self.cognome, 
-				self.data_di_nascita.strftime('%d/%m/%Y'), 
-				self.grado, 
-				self.squadra,
-				self.gruppo_festivo
+				self.NOME, 
+				self.COGNOME, 
+				self.DATA_DI_NASCITA.strftime('%d/%m/%Y'), 
+				self.GRADO, 
+				self.SQUADRA,
+				self.GRUPPO_FESTIVO
 				)
 
 	def __repr__(self):
 		return self.__str__()
 
-	def esente_notti(self):
-		if self.grado in ["Ispettore", "Presidente"]:
+	def EsenteNotti(self):
+		if self.GRADO in ["Ispettore", "Presidente"]:
 			return True
 		return False
 
-	def esente_sabati(self):
-		if self.grado in ["Ispettore", "Presidente"]:
+	def EsenteSabati(self):
+		if self.GRADO in ["Ispettore", "Presidente"]:
 			return True
 		return False
 
-	def aspirante(self):
-		if self.grado == "Aspirante" and not self.aspirante_passa_a_vigile:
+	def Aspirante(self):
+		if self.GRADO == "Aspirante" and not self.ASPIRANTE_PASSA_A_VIGILE:
 			return True
 		return False
 
-	def graduato(self):
-		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]:
+	def Graduato(self):
+		if self.GRADO in ["Comandante", "Vicecomandante", "Capoplotone", "CapoSQUADRA"]:
 			return True
 		return False
 
-	def get_compleanno_offset(self, data_inizio):
-		if self.data_di_nascita.month <= data_inizio.month and self.data_di_nascita.day < data_inizio.day:
-			compleanno = dt.date(data_inizio.year + 1, self.data_di_nascita.month, self.data_di_nascita.day)
+	def OffsetCompleanno(self, data_inizio):
+		if (
+			self.DATA_DI_NASCITA.month <= data_inizio.month
+			and self.DATA_DI_NASCITA.day < data_inizio.day
+			):
+			compleanno = dt.date(data_inizio.year + 1, self.DATA_DI_NASCITA.month, self.DATA_DI_NASCITA.day)
 		else:
-			compleanno = dt.date(data_inizio.year, self.data_di_nascita.month, self.data_di_nascita.day)
+			compleanno = dt.date(data_inizio.year, self.DATA_DI_NASCITA.month, self.DATA_DI_NASCITA.day)
 		offset = (compleanno - data_inizio).days
 		return offset
 
-	def numero_servizi(self):
-		return self.notti + self.sabati + self.festivi
+	def NumeroServizi(self):
+		return self.NOTTI + self.SABATI + self.FESTIVI
 
 def read_csv_vigili(filename="./vigili.csv"):
 	data = {}
@@ -151,14 +155,18 @@ def read_csv_riporti(data, filename="./riporti.csv"):
 		else:
 			line = line.strip("\n\r").split(";")
 			if len(line) > 0:
-				data[int(line[0])].passato_servizi_extra = int(line[1])
-				data[int(line[0])].passato_fatto_sabato = bool(int(line[2]))
-				data[int(line[0])].passato_fatto_servizio_oneroso = int(line[3])
+				data[int(line[0])].PASSATO_SERVIZI_EXTRA = int(line[1])
+				data[int(line[0])].PASSATO_SABATI = bool(int(line[2]))
+				data[int(line[0])].PASSATO_SERVIZI_ONEROSI = int(line[3])
 	fi.close()
 	return data
 
 def correggi_aspiranti(data, data_inizio, data_fine):
 	for vigile in data.keys():
-		if data[vigile].grado == "Aspirante" and data[vigile].data_passaggio_vigile > data_inizio and data[vigile].data_passaggio_vigile < data_fine:
-			data[vigile].aspirante_passa_a_vigile = True
+		if (
+			data[vigile].GRADO == "Aspirante"
+			and data[vigile].DATA_PASSAGGIO_VIGILE > data_inizio
+			and data[vigile].DATA_PASSAGGIO_VIGILE < data_fine
+			):
+			data[vigile].ASPIRANTE_PASSA_A_VIGILE = True
 	return data
