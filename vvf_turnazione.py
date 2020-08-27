@@ -584,18 +584,19 @@ class TurnazioneVVF:
 			out = open("./riporti_{}.csv".format(self.ANNO), "w")
 			out.write("#Vigile;Servizi Extra Media;Sabati;;;;;Servizi Onerosi\n")
 			for vigile in self.VIGILI:
-				out.write("{};".format(vigile))
+				line = "{};".format(vigile)
 				servizi_extra = 0
 				if (
 					self.DB[vigile].GRADO == "Vigile"
 					and not self.DB[vigile].ESENTE_CP
 					):
 					servizi_extra = math.ceil(self.DB[vigile].NumeroServizi() - media_servizi)
-				out.write("{};".format(servizi_extra))
-				out.write("{};".format(self.DB[vigile].SABATI))
+				line += "{};".format(servizi_extra)
+				line += "{};".format(self.DB[vigile].SABATI)
 				for sabati in self.DB[vigile].PASSATO_SABATI[0:4]:
-					out.write("{};".format(sabati))
-				out.write("{}\n".format(0)) #TODO
+					line += "{};".format(sabati)
+				line += "{}".format(0) #TODO
 				for servizi in self.DB[vigile].PASSATO_SERVIZI_ONEROSI[0:4]:
-					out.write("{};".format(servizi))
+					line += "{};".format(servizi)
+				out.write(line+"\n")
 			out.close()
