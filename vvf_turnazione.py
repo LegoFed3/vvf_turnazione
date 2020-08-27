@@ -191,9 +191,30 @@ class TurnazioneVVF:
 					not self.DB[vigile].EsenteNotti()
 					and not self.DB[vigile].Aspirante()
 					and (self.DB[vigile].SQUADRA == curr_SQUADRA or self.DB[vigile].SQUADRA == 0 or loose)
-					and len(self.DB[vigile].ECCEZIONI) == 0
+					and not self.DB[vigile].ESENTE_CP
+					and not "NottiSoloSabato" in self.DB[vigile].ECCEZIONI
+					and not "NottiSoloSabatoFestivi" in self.DB[vigile].ECCEZIONI
+					and not "NottiSoloLun" in self.DB[vigile].ECCEZIONI
+					and not "NottiSoloMarVen" in self.DB[vigile].ECCEZIONI
+					and not "ServiziSoloPrimi6Mesi" in self.DB[vigile].ECCEZIONI
 					):
-					self.CONSTR_NOTTI_SETTIMANA_VIGILE[settimana][vigile] = self.Solver.Constraint(-self.Solver.infinity(), 1, "constr_una_notte_settimana({})_vigile({})".format(settimana, vigile))
+					self.CONSTR_NOTTI_SETTIMANA_VIGILE[settimana][vigile] = self.Solver.Constraint(-self.Solver.infinity(), 1, "constr_notti_settimana({})_vigile({})".format(settimana, vigile))
+					for i in range(7):
+						curr_giorno = giorno + i
+						self.CONSTR_NOTTI_SETTIMANA_VIGILE[settimana][vigile].SetCoefficient(self.VAR_NOTTI[curr_giorno][vigile], 1)
+				# Max 2 notti a settimana se esente CP
+				elif (
+					not self.DB[vigile].EsenteNotti()
+					and not self.DB[vigile].Aspirante()
+					and (self.DB[vigile].SQUADRA == curr_SQUADRA or self.DB[vigile].SQUADRA == 0 or loose)
+					and (self.DB[vigile].ESENTE_CP
+					or "NottiSoloSabato" in self.DB[vigile].ECCEZIONI
+					or "NottiSoloSabatoFestivi" in self.DB[vigile].ECCEZIONI
+					or "NottiSoloLun" in self.DB[vigile].ECCEZIONI
+					or "NottiSoloMarVen" in self.DB[vigile].ECCEZIONI
+					or "ServiziSoloPrimi6Mesi" in self.DB[vigile].ECCEZIONI)
+					):
+					self.CONSTR_NOTTI_SETTIMANA_VIGILE[settimana][vigile] = self.Solver.Constraint(-self.Solver.infinity(), 2, "constr_notti_settimana({})_vigile({})".format(settimana, vigile))
 					for i in range(7):
 						curr_giorno = giorno + i
 						self.CONSTR_NOTTI_SETTIMANA_VIGILE[settimana][vigile].SetCoefficient(self.VAR_NOTTI[curr_giorno][vigile], 1)
