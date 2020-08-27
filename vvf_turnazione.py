@@ -63,7 +63,7 @@ class TurnazioneVVF:
 	_printed_solution = False
 
 	#Model
-	Solver = pywraplp.Solver('VVF_turni', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+	Solver = pywraplp.Solver('Turnazione_VVF', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 	STATUS = -1
 
 	def _getDateFromOffset(self, offset):
@@ -82,7 +82,7 @@ class TurnazioneVVF:
 		self.data_inizio = data_inizio
 		self.data_fine = data_fine
 		if data_inizio.weekday() != 4:
-			print("ERRORE: il giorno di partenza non è un venerdì!")
+			print("ERRORE: il giorno di inizio non è un venerdì!")
 			exit(-1)
 		elif data_fine.weekday() != 4:
 			print("ERRORE: il giorno di fine non è un venerdì!")
