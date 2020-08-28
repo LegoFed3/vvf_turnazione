@@ -104,6 +104,11 @@ class Vigile:
 			return True
 		return False
 
+	def EsenteFestivi(self):
+		if self.grado in ["Ispettore", "Presidente"] or self.gruppo_festivo == 0:
+			return True
+		return False
+
 	def Aspirante(self):
 		if self.grado == "Aspirante" and not self.aspirante_passa_a_vigile:
 			return True
