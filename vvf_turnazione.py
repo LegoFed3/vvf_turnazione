@@ -116,6 +116,9 @@ class TurnazioneVVF:
 		elif data_fine.weekday() != 4:
 			print("ERRORE: il giorno di fine non è un venerdì!")
 			exit(-1)
+		if (data_fine - data_inizio).days > 400:
+			print("ERRORE: il periodo dal {} al {} è troppo lungo, sei sicuro sia giusto?")
+			exit(-1)
 		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(vigili_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, riporti_fn)
