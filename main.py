@@ -14,10 +14,9 @@ riporti_fn = "./riporti.csv"
 time_limit = 300000 #ms
 verbose = False
 loose = False
-compute_aspiranti = False
 no_servizi_compleanno = True
 
-model = vvf.TurnazioneVVF(data_inizio, data_fine, squadra_di_partenza, vigili_fn, riporti_fn, loose=loose, compute_aspiranti=compute_aspiranti, no_servizi_compleanno=no_servizi_compleanno)
+model = vvf.TurnazioneVVF(data_inizio, data_fine, squadra_di_partenza, vigili_fn, riporti_fn, loose=loose, no_servizi_compleanno=no_servizi_compleanno)
 model.Solve(time_limit, verbose)
 
 model.SaveSolution()
