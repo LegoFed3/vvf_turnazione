@@ -29,6 +29,8 @@ class TurnazioneVVF:
 	constr_festivi_vigile = {}
 	constr_festivi_notti_circostanti_vigile = {}
 	constr_festivi_spaziati = {}
+	
+	constr_servizi_onerosi_vigile = {}
 	constr_compleanno_vigile = {}
 
 	var_servizi_vigile = {}
@@ -61,6 +63,9 @@ class TurnazioneVVF:
 	data_inizio = 0
 	data_fine = 0
 	_printed_solution = False
+	FESTIVI_SPECIALI = []
+	_FESTIVI_ONEROSI = []
+	_NOTTI_ONEROSE = []
 
 	#Model
 	Solver = pywraplp.Solver('Turnazione_VVF', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
@@ -75,9 +80,35 @@ class TurnazioneVVF:
 	def _getOffsetFromDate(self, date):
 		return (date - self.data_inizio).days
 
-	def __init__(self, data_inizio, data_fine, squadra_di_partenza,
-				giorni_festivi_speciali, vigili_fn, riporti_fn, loose=False,
-				compute_aspiranti=True, no_servizi_compleanno=True):
+	def _computeServiziSpecialiOnerosi(self):
+		self.FESTIVI_SPECIALI = [
+			dt.date(self.data_inizio.year,1,6), #Epifania
+			_calc_easter(self.data_inizio.year), #Pasqua
+			_calc_easter(self.data_inizio.year) + dt.timedelta(1), #Pasquetta
+			dt.date(self.data_inizio.year,4,25), #25 Aprile
+			dt.date(self.data_inizio.year,5,1), #1 Maggio
+			dt.date(self.data_inizio.year,6,2), #2 Giugno
+			dt.date(self.data_inizio.year,8,15), #Ferragosto
+			dt.date(self.data_inizio.year,11,1), #1 Novembre
+			dt.date(self.data_inizio.year,12,8), #8 Dicembre
+			dt.date(self.data_inizio.year,12,25), #Natale
+			dt.date(self.data_inizio.year,12,26), #S. Stefano
+			dt.date(self.data_inizio.year+1,1,1), #1 Gennaio
+			dt.date(self.data_inizio.year+1,1,6), #Epifania
+			]
+		print("Pasqua cade il", self.FESTIVI_SPECIALI[1])
+		self._FESTIVI_ONEROSI = [
+			self.FESTIVI_SPECIALI[1], #Pasqua
+			self.FESTIVI_SPECIALI[6], #Ferragosto
+			self.FESTIVI_SPECIALI[9], #Natale
+			]
+		self._NOTTI_ONEROSE = [
+			dt.date(self.data_inizio.year,12,31), #Capodanno
+			]
+
+	def __init__(self, data_inizio, data_fine, squadra_di_partenza, vigili_fn, 
+				 riporti_fn, loose=False, compute_aspiranti=True, 
+				 no_servizi_compleanno=True):
 		print("Creo il modello...")
 		self.data_inizio = data_inizio
 		self.data_fine = data_fine
@@ -87,6 +118,7 @@ class TurnazioneVVF:
 		elif data_fine.weekday() != 4:
 			print("ERRORE: il giorno di fine non è un venerdì!")
 			exit(-1)
+		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(vigili_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, riporti_fn)
 		self.DB = vvf_io.correggi_aspiranti(self.DB, data_inizio, data_fine)
@@ -144,7 +176,7 @@ class TurnazioneVVF:
 							self.constr_notti_aspiranti[curr_giorno].SetCoefficient(self.var_notti_aspiranti[curr_giorno][vigile], -1)
 
 				#SABATO
-				if curr_data.weekday() == 5 and curr_data not in giorni_festivi_speciali:
+				if curr_data.weekday() == 5 and curr_data not in self.FESTIVI_SPECIALI:
 
 					#VAR: vigile candidati per il sabato
 					self.var_sabati[curr_giorno] = {}
@@ -171,7 +203,7 @@ class TurnazioneVVF:
 								self.constr_sabati_aspiranti[curr_giorno].SetCoefficient(self.var_sabati_aspiranti[curr_giorno][vigile], -1)
 
 				#FESTIVO
-				if curr_data.weekday() == 6 or curr_data in giorni_festivi_speciali:
+				if curr_data.weekday() == 6 or curr_data in self.FESTIVI_SPECIALI:
 					
 					#VAR: vigili candidati per il festivo
 					self.var_festivi[curr_giorno] = {}
@@ -255,6 +287,16 @@ class TurnazioneVVF:
 					giorno_prima = festivo - 1
 					if vigile in self.var_notti[giorno_prima].keys():
 						self.constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(self.var_notti[giorno_prima][vigile], 1)
+
+			#CONSTR: max 1 servizio oneroso l'anno
+			self.constr_servizi_onerosi_vigile[vigile] = self.Solver.Constraint(-self.Solver.infinity(), 1, "constr_servizi_onerosi_vigile({})".format(vigile))
+			for festivo in self.var_festivi.keys():
+				if self._getDateFromOffset(festivo) in self._FESTIVI_ONEROSI:
+					self.constr_servizi_onerosi_vigile[vigile].SetCoefficient(self.var_festivi[festivo][gruppo], 1)
+			for notte in self.var_notti.keys():
+				if self._getDateFromOffset(notte) in self._NOTTI_ONEROSE:
+					if vigile in self.var_notti[notte].keys():
+						self.constr_servizi_onerosi_vigile[vigile].SetCoefficient(self.var_notti[notte][vigile], 1)
 
 			#CONSTR: spazia i FESTIVI di almeno 5 servizi per lato
 			if gruppo not in self.constr_festivi_spaziati.keys():
@@ -623,7 +665,7 @@ class TurnazioneVVF:
 				out.write(line+"\n")
 			out.close()
 
-def calc_easter(year):
+def _calc_easter(year):
     "Returns Easter as a date object."
     a = year % 19
     b = year // 100
