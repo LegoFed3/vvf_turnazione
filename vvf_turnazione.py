@@ -63,7 +63,7 @@ class TurnazioneVVF:
 	data_inizio = 0
 	data_fine = 0
 	_printed_solution = False
-	FESTIVI_SPECIALI = []
+	_FESTIVI_SPECIALI = []
 	_FESTIVI_ONEROSI = []
 	_NOTTI_ONEROSE = []
 
@@ -81,29 +81,30 @@ class TurnazioneVVF:
 		return (date - self.data_inizio).days
 
 	def _computeServiziSpecialiOnerosi(self):
-		self.FESTIVI_SPECIALI = [
-			dt.date(self.data_inizio.year,1,6), #Epifania
-			_calc_easter(self.data_inizio.year), #Pasqua
-			_calc_easter(self.data_inizio.year) + dt.timedelta(1), #Pasquetta
-			dt.date(self.data_inizio.year,4,25), #25 Aprile
-			dt.date(self.data_inizio.year,5,1), #1 Maggio
-			dt.date(self.data_inizio.year,6,2), #2 Giugno
-			dt.date(self.data_inizio.year,8,15), #Ferragosto
-			dt.date(self.data_inizio.year,11,1), #1 Novembre
-			dt.date(self.data_inizio.year,12,8), #8 Dicembre
-			dt.date(self.data_inizio.year,12,25), #Natale
-			dt.date(self.data_inizio.year,12,26), #S. Stefano
-			dt.date(self.data_inizio.year+1,1,1), #1 Gennaio
-			dt.date(self.data_inizio.year+1,1,6), #Epifania
+		pasqua = _calc_easter(self.data_inizio.year)
+		print("Pasqua cade il", pasqua)
+		self._FESTIVI_SPECIALI = [
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,1,6)), #Epifania
+			self._getOffsetFromDate(pasqua), #Pasqua
+			self._getOffsetFromDate(pasqua) + 1, #Pasquetta
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,4,25)), #25 Aprile
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,5,1)), #1 Maggio
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,6,2)), #2 Giugno
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,8,15)), #Ferragosto
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,11,1)), #1 Novembre
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,12,8)), #8 Dicembre
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,12,25)), #Natale
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,12,26)), #S. Stefano
+			self._getOffsetFromDate(dt.date(self.data_inizio.year+1,1,1)), #1 Gennaio
+			self._getOffsetFromDate(dt.date(self.data_inizio.year+1,1,6)), #Epifania
 			]
-		print("Pasqua cade il", self.FESTIVI_SPECIALI[1])
 		self._FESTIVI_ONEROSI = [
-			self.FESTIVI_SPECIALI[1], #Pasqua
-			self.FESTIVI_SPECIALI[6], #Ferragosto
-			self.FESTIVI_SPECIALI[9], #Natale
+			self._FESTIVI_SPECIALI[1], #Pasqua
+			self._FESTIVI_SPECIALI[6], #Ferragosto
+			self._FESTIVI_SPECIALI[9], #Natale
 			]
 		self._NOTTI_ONEROSE = [
-			dt.date(self.data_inizio.year,12,31), #Capodanno
+			self._getOffsetFromDate(dt.date(self.data_inizio.year,12,31)), #Capodanno
 			]
 
 	def __init__(self, data_inizio, data_fine, squadra_di_partenza, vigili_fn, 
@@ -176,7 +177,7 @@ class TurnazioneVVF:
 							self.constr_notti_aspiranti[curr_giorno].SetCoefficient(self.var_notti_aspiranti[curr_giorno][vigile], -1)
 
 				#SABATO
-				if curr_data.weekday() == 5 and curr_data not in self.FESTIVI_SPECIALI:
+				if curr_data.weekday() == 5 and curr_giorno not in self._FESTIVI_SPECIALI:
 
 					#VAR: vigile candidati per il sabato
 					self.var_sabati[curr_giorno] = {}
@@ -203,7 +204,7 @@ class TurnazioneVVF:
 								self.constr_sabati_aspiranti[curr_giorno].SetCoefficient(self.var_sabati_aspiranti[curr_giorno][vigile], -1)
 
 				#FESTIVO
-				if curr_data.weekday() == 6 or curr_data in self.FESTIVI_SPECIALI:
+				if curr_data.weekday() == 6 or curr_giorno in self._FESTIVI_SPECIALI:
 					
 					#VAR: vigili candidati per il festivo
 					self.var_festivi[curr_giorno] = {}
@@ -291,10 +292,10 @@ class TurnazioneVVF:
 			#CONSTR: max 1 servizio oneroso l'anno
 			self.constr_servizi_onerosi_vigile[vigile] = self.Solver.Constraint(-self.Solver.infinity(), 1, "constr_servizi_onerosi_vigile({})".format(vigile))
 			for festivo in self.var_festivi.keys():
-				if self._getDateFromOffset(festivo) in self._FESTIVI_ONEROSI:
+				if festivo in self._FESTIVI_ONEROSI:
 					self.constr_servizi_onerosi_vigile[vigile].SetCoefficient(self.var_festivi[festivo][gruppo], 1)
 			for notte in self.var_notti.keys():
-				if self._getDateFromOffset(notte) in self._NOTTI_ONEROSE:
+				if notte in self._NOTTI_ONEROSE:
 					if vigile in self.var_notti[notte].keys():
 						self.constr_servizi_onerosi_vigile[vigile].SetCoefficient(self.var_notti[notte][vigile], 1)
 
@@ -499,32 +500,36 @@ class TurnazioneVVF:
 			#Il target è 0 se il vigile non ha fatto più servizi della media
 			self.constr_cost_servizi_vigile[vigile] = self.Solver.Constraint(-2*self.DB[vigile].passato_servizi_extra, -2*self.DB[vigile].passato_servizi_extra, "constr_costo_servizi_vigile({})".format(vigile))
 			self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
-			mul_NOTTI = 1
-			mul_SABATI = 1 + sum(self.DB[vigile].passato_sabati) #Sabati più probabili se fatti pochi negli anni recenti
-			# if self.DB[vigile].esente_cp:
-				# mul_NOTTI *= 10.0/15.0 #Esenti CP fanno più notti
+			mul_notti = 1
+			mul_sabati = 1 + sum(self.DB[vigile].passato_sabati) #Sabati più probabili se fatti pochi negli anni recenti
 			if self.DB[vigile].aspirante_passa_a_vigile:
-				mul_NOTTI *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
-				mul_SABATI *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
+				mul_notti *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
+				mul_sabati *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
 			compleanno = self.DB[vigile].OffsetCompleanno(self.data_inizio)
 			for giorno in range(len(self.var_notti.keys())):
 				mul_compleanno = 1
+				mul_notti_onerose = 1
+				mul_festivi_oneros1 = 1
 				if giorno == compleanno:
 					mul_compleanno = 2
+				if giorno in self._NOTTI_ONEROSE:
+					mul_notti_onerose = 1 + sum(self.DB[vigile].passato_servizi_onerosi)
+				if giorno in self._FESTIVI_ONEROSI:
+					mul_festivi_oneros1 = 1 + sum(self.DB[vigile].passato_servizi_onerosi)
 				if vigile in self.var_notti[giorno].keys():
 					if self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mul_compleanno * mul_NOTTI) # Notti di squadra contano 1
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mul_compleanno * mul_notti * mul_notti_onerose) # Notti di squadra contano 1
 					else:
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2 * mul_compleanno * mul_NOTTI) # Notti NON di squadra contano il doppio
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 2 * mul_compleanno * mul_notti) # Notti NON di squadra contano il doppio
 				elif vigile in self.var_notti_aspiranti[giorno].keys() and compute_aspiranti:
 					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti_aspiranti[giorno][vigile], 1 * mul_compleanno)
 				if giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1 * mul_compleanno * mul_SABATI)
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1 * mul_compleanno * mul_sabati)
 					elif vigile in self.var_sabati_aspiranti[giorno].keys() and compute_aspiranti:
 						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati_aspiranti[giorno][vigile], 1 * mul_compleanno)
 				if giorno in self.var_festivi.keys() and gruppo != 0:
-					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1 * mul_compleanno)
+					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi[giorno][gruppo], 1 * mul_compleanno * mul_festivi_oneros1)
 
 		for i in range(len(self.vigili)):
 			v1 = self.vigili[i]
@@ -582,6 +587,8 @@ class TurnazioneVVF:
 				for giorno in self.var_notti.keys():
 					if vigile in self.var_notti[giorno].keys():
 						self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())
+						if giorno in self._NOTTI_ONEROSE and self.var_notti[giorno][vigile].solution_value() == 1:
+							self.DB[vigile].servizi_onerosi += 1
 				for giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
 						self.DB[vigile].sabati += int(self.var_sabati[giorno][vigile].solution_value())
@@ -589,6 +596,8 @@ class TurnazioneVVF:
 					gruppo = self.DB[vigile].gruppo_festivo
 					if gruppo in self.var_festivi[giorno].keys():
 						self.DB[vigile].festivi += int(self.var_festivi[giorno][gruppo].solution_value())
+						if giorno in self._FESTIVI_ONEROSI and self.var_festivi[giorno][gruppo].solution_value() == 1:
+							self.DB[vigile].servizi_onerosi += 1
 				line = "Vigile {} ({} {}, {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, self.DB[vigile].grado)
 				if self.DB[vigile].aspirante_passa_a_vigile:
 					line += "*"
@@ -659,7 +668,7 @@ class TurnazioneVVF:
 				line += "{};".format(self.DB[vigile].sabati)
 				for sabati in self.DB[vigile].passato_sabati[0:4]:
 					line += "{};".format(sabati)
-				line += "{}".format(0) #TODO
+				line += "{};".format(self.DB[vigile].servizi_onerosi)
 				for servizi in self.DB[vigile].passato_servizi_onerosi[0:4]:
 					line += "{};".format(servizi)
 				out.write(line+"\n")

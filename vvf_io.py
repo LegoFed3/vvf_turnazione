@@ -55,6 +55,7 @@ class Vigile:
 	passato_servizi_extra = 0
 	esente_cp = False
 	aspirante_passa_a_vigile = False
+	servizi_onerosi = 0
 
 	def __init__(self, *args):
 		self.nome = args[0][0]
