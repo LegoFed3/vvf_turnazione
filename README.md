@@ -24,25 +24,21 @@ python main.py data_inizio data_fine squadra_di_partenza
 ```
   data_inizio           Data di inizio (dev'essere un venerdì), e.g. 2021-1-15
   data_fine             Data di fine (dev'essere un venerdì), e.g. 2022-1-14
-  squadra_di_partenza   Squadra reperibile per la prima settimana
+  squadra_di_partenza   Squadra reperibile per la prima settimana, e.g. 1
 ```
 ### Parametri Opzionali
 ```
   -h, --help            Mostra le opzioni d'uso (in inglese)
   -c, --servizi-compleanno
-                        Abilita l'assegnazione di servizi il giorno di
-                        compleanno
-  -l, --loose           Abilita l'assegnazione di notturni al di fuori della
-                        settimana di reperibilità
+                        Abilita l'assegnazione di servizi il giorno di compleanno
+  -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
   -R RIPORTI_FN, --riporti-fn RIPORTI_FN
-                        Percorso del file CSV contenente i riporti dei turni
-                        extra od onerosi svolti negli anni precedenti
+                        Percorso del file CSV contenente i riporti dei turni extra od onerosi svolti negli anni precedenti
   -t TIME_LIMIT, --time-limit TIME_LIMIT
                         Tempo limite in ms (Default: 300000)
   -v, --verbose         Abilita l'output verboso del solver
   -V VIGILI_FN, --vigili-fn VIGILI_FN
-                        Percorso del file CSV contenente i dati dei vigili
-                        (DEFAULT: vigili.csv)
+                        Percorso del file CSV contenente i dati dei vigili (DEFAULT: vigili.csv)
 ```
 ## Output
 Il programma produce due file:
