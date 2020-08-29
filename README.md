@@ -18,9 +18,32 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 
 ## Uso
 ```
-python main.py
+python main.py data_inizio data_fine squadra_di_partenza
 ```
-
+### Parametri posizionali
+```
+  data_inizio           Data di inizio (dev'essere un venerdì), e.g. 2021-1-15
+  data_fine             Data di fine (dev'essere un venerdì), e.g. 2022-1-14
+  squadra_di_partenza   Squadra reperibile per la prima settimana
+```
+### Parametri Opzionali
+```
+  -h, --help            Mostra le opzioni d'uso (in inglese)
+  -c, --servizi-compleanno
+                        Abilita l'assegnazione di servizi il giorno di
+                        compleanno
+  -l, --loose           Abilita l'assegnazione di notturni al di fuori della
+                        settimana di reperibilità
+  -R RIPORTI_FN, --riporti-fn RIPORTI_FN
+                        Percorso del file CSV contenente i riporti dei turni
+                        extra od onerosi svolti negli anni precedenti
+  -t TIME_LIMIT, --time-limit TIME_LIMIT
+                        Tempo limite in ms (Default: 300000)
+  -v, --verbose         Abilita l'output verboso del solver
+  -V VIGILI_FN, --vigili-fn VIGILI_FN
+                        Percorso del file CSV contenente i dati dei vigili
+                        (DEFAULT: vigili.csv)
+```
 ## Output
 Il programma produce due file:
 * *turni_&lt;anno&gt;.csv*: contiene la turnistica calcolata; per ogni data è indicato il vigile assegnato al relativo notturno, e per sabati ed i festivi i vigili assegnati ai medesimi.

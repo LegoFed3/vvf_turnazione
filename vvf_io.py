@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import argparse
 
 _GRADI_VALIDI = [
 	"Comandante",
@@ -178,3 +179,12 @@ def correggi_aspiranti(db, data_inizio, data_fine):
 			):
 			db[vigile].aspirante_passa_a_vigile = True
 	return db
+
+def date(string):
+	try:
+		date = list(map(int, string.split("-")))
+		date = dt.date(date[0], date[1], date[2])
+		return date
+	except:
+		msg = "{} is not a valid date string (expected format: YYYY-MM-DD)".format(string)
+		raise argparse.ArgumentTypeError(msg)

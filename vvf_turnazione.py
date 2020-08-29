@@ -107,7 +107,7 @@ class TurnazioneVVF:
 			]
 
 	def __init__(self, data_inizio, data_fine, squadra_di_partenza, vigili_fn, 
-				 riporti_fn, loose=False, no_servizi_compleanno=True):
+				 riporti_fn, loose, servizi_compleanno):
 		print("Creo il modello...")
 		self.data_inizio = data_inizio
 		self.data_fine = data_fine
@@ -146,6 +146,9 @@ class TurnazioneVVF:
 		num_giorni = self._getOffsetFromDate(self.data_fine)
 		giorno = 0
 		curr_squadra = squadra_di_partenza
+		if squadra_di_partenza not in self.vigili_squadra.keys():
+			print ("ERRORE: squadra iniziale {} inesistente!".format(squadra_di_partenza))
+			exit(-1)
 
 		### FASE 1 ###
 		print("* Fase 1: creo possibilità...")
@@ -434,7 +437,7 @@ class TurnazioneVVF:
 								self.constr_ex_no_servizi_mese[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
 
 			#CONSTR: no servizi il giorno di compleanno
-			if no_servizi_compleanno:
+			if not servizi_compleanno:
 				compleanno = self.DB[vigile].OffsetCompleanno(self.data_inizio)
 				self.constr_compleanno_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_compleanno_vigile({})".format(vigile))
 				if compleanno in self.var_notti.keys():
