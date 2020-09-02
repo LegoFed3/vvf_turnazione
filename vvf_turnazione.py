@@ -219,18 +219,20 @@ class TurnazioneVVF:
 			for vigile in self.var_notti[curr_giorno].keys():
 				max_notti_settimana = 1
 				#Max 2 notti a settimana se esente CP o fa notti solo in alcuni giorni
+				lim_giorni = len([e for e in self.DB[vigile].eccezzioni if "NoNotti" in e])
+				lim_mesi = len([e for e in self.DB[vigile].eccezzioni if "NoNotti" in e])
 				if (
 					self.DB[vigile].esente_cp
 					or "NottiSoloSabatoFestivi" in self.DB[vigile].eccezzioni
-					or "NottiSoloMarVen" in self.DB[vigile].eccezzioni
-					or "ServiziSoloPrimi6Mesi" in self.DB[vigile].eccezzioni
+					or lim_giorni >= 5
+					or lim_mesi >= 5
 					):
 					max_notti_settimana = 2
+				elif lim_mesi >= 9:
+					max_notti_settimana = 3
 				self.constr_notti_settimana_vigile[settimana][vigile] = self.solver.Constraint(-self.solver.infinity(), max_notti_settimana, "constr_notti_settimana({})_vigile({})".format(settimana, vigile))
 				for i in range(7):
 					self.constr_notti_settimana_vigile[settimana][vigile].SetCoefficient(self.var_notti[giorno + i][vigile], 1)
-
-			#TODO: aggiungi vincolo per evitare notti consecutive?
 
 			curr_squadra = (curr_squadra % num_squadre) + 1
 			giorno += 7
