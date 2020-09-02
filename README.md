@@ -11,24 +11,6 @@ python -m pip install --upgrade --user ortools
 ```
 Mentre su Windows si vedano i link di cui sopra.
 
-## Input
-Il programma consuma in input due file (esempi dei quali sono forniti in questo repository):
-* *organico.csv*: contiene l'elenco dei vigili, i loro gradi, cariche, squadre e festivi di appartenenza ed eventuali richieste eccezionali circa la relativa turnistica. Il file è strutturato come segue:
-	* *ID*: identificativo numerico del vigile. Dev'essere unico e stabile nel tempo.
-	* *Nome*, *Cognome* e *Data di Nascita*: generalità del vigile. La data dev'essere nel formato GG/MM/AAAA.
-	* *Grado*: grado del vigile (determina alcune restrizioni sul tipo e numero di servizi). I gradi validi sono: Comandante, Vicecomandante, Capoplotone, Caposquadra, Vigile, Aspirante, Ispettore, Presidente.
-	* *Squadra*: squadra reperibile cui il vigile afferisce. Il numero 0 è riservato ai vigili non afferenti ad alcuna squadra (e.g. il Comandante).
-	* *Gruppo Festivo*: identificativo della squadra festivo cui il vigile afferisce.
-	* *Data Passaggio a Vigile*: per gli aspiranti, determine quanti servizi assegnare perl'anno del passaggio e quando assegnarli. Dev'essere nel formato GG/MM/AAAA.
-	* *Eccezioni*: lista separata da virgola (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
-		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
-		* Altre richieste: EsenteCP, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12.
-* *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi svolti negli ultimi anni. Il file è strutturato come segue:
-	* *ID*: identificativo numerico del vigile nel file organico.csv.
-	* *Servizi Extra Media: intero (potenzialmente negativo) indicante qualora il vigile (che non ricopre cariche particolari) abbia svolto più o meno servizi della media nell'anno precedente.
-	* *Sabati*: 5 colonne indicani il numero di sabati svolti nei 5 anni precedenti.
-	* *Servizi Onerosi*: 5 colonne indicani il numero di servizi onerosi svolti nei 5 anni precedenti.
-
 ## Uso
 ```
 python main.py data_di_inizio data_di_fine squadra_di_partenza 
@@ -65,6 +47,24 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
                         Default: 300000
   -v, --verbose         Abilita l'output verboso del solver
 ```
+
+## Input
+Il programma consuma in input due file (esempi dei quali sono forniti in questo repository):
+* *organico.csv*: contiene l'elenco dei vigili, i loro gradi, cariche, squadre e festivi di appartenenza ed eventuali richieste eccezionali circa la relativa turnistica. Il file è strutturato come segue:
+	* *ID*: identificativo numerico del vigile. Dev'essere unico e stabile nel tempo.
+	* *Nome*, *Cognome* e *Data di Nascita*: generalità del vigile. La data dev'essere nel formato GG/MM/AAAA.
+	* *Grado*: grado del vigile (determina alcune restrizioni sul tipo e numero di servizi). I gradi validi sono: Comandante, Vicecomandante, Capoplotone, Caposquadra, Vigile, Aspirante, Ispettore, Presidente.
+	* *Squadra*: squadra reperibile cui il vigile afferisce. Il numero 0 è riservato ai vigili non afferenti ad alcuna squadra (e.g. il Comandante).
+	* *Gruppo Festivo*: identificativo della squadra festivo cui il vigile afferisce.
+	* *Data Passaggio a Vigile*: per gli aspiranti, determine quanti servizi assegnare perl'anno del passaggio e quando assegnarli. Dev'essere nel formato GG/MM/AAAA.
+	* *Eccezioni*: lista separata da virgola (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
+		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
+		* Altre richieste: EsenteCP, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12.
+* *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi svolti negli ultimi anni. Il file è strutturato come segue:
+	* *ID*: identificativo numerico del vigile nel file organico.csv.
+	* *Servizi Extra Media: intero (potenzialmente negativo) indicante qualora il vigile (che non ricopre cariche particolari) abbia svolto più o meno servizi della media nell'anno precedente.
+	* *Sabati*: 5 colonne indicani il numero di sabati svolti nei 5 anni precedenti.
+	* *Servizi Onerosi*: 5 colonne indicani il numero di servizi onerosi svolti nei 5 anni precedenti.
 
 ## Output
 Il programma produce due file:
