@@ -3,9 +3,6 @@ from ortools.linear_solver import pywraplp
 import datetime as dt
 import vvf_io
 
-_MAX_ASPIRANTI_AFFIANCATI = 3 #2
-_NUM_THREADS = 3
-
 class TurnazioneVVF:
 	#Collections
 	giorno_squadra = {}
@@ -45,11 +42,11 @@ class TurnazioneVVF:
 	constr_festivi_minimi_esenti_CP = {}
 	constr_servizi_aspiranti_passaggio_vigile = {}
 
-	constr_ex_notti_solo_sabato = {}
+	constr_ex_notti_direttivo = {}
+	constr_ex_festivi_direttivo = {}
+
 	constr_ex_notti_solo_sabato_festivi = {}
-	constr_ex_notti_solo_lun = {}
-	constr_ex_notti_solo_mar_ven = {}
-	constr_ex_servizi_primi_6_mesi = {}
+	constr_ex_no_notti_giornosettimana = {}
 	constr_ex_no_servizi_mese = {}
 
 	DB = {}
@@ -106,24 +103,25 @@ class TurnazioneVVF:
 			self._FESTIVI_SPECIALI[9], #Natale
 			]
 
-	def __init__(self, data_inizio, data_fine, squadra_di_partenza, vigili_fn, 
-				 riporti_fn, loose, servizi_compleanno):
+	def __init__(self, args):
 		print("Creo il modello...")
-		self.data_inizio = data_inizio
-		self.data_fine = data_fine
-		if data_inizio.weekday() != 4:
+		self.data_inizio = args.data_di_inizio
+		self.data_fine = args.data_di_fine
+		if self.data_inizio.weekday() != 4:
 			print("ERRORE: il giorno di inizio non è un venerdì!")
 			exit(-1)
-		elif data_fine.weekday() != 4:
+		elif self.data_fine.weekday() != 4:
 			print("ERRORE: il giorno di fine non è un venerdì!")
 			exit(-1)
-		if (data_fine - data_inizio).days > 400:
+		if (self.data_fine - self.data_inizio).days > 400:
 			print("ERRORE: il periodo dal {} al {} è troppo lungo, sei sicuro sia giusto?")
 			exit(-1)
+		loose = args.loose
+		servizi_compleanno = args.servizi_compleanno
 		self._computeServiziSpecialiOnerosi()
-		self.DB = vvf_io.read_csv_vigili(vigili_fn)
-		self.DB = vvf_io.read_csv_riporti(self.DB, riporti_fn)
-		self.DB = vvf_io.correggi_aspiranti(self.DB, data_inizio, data_fine)
+		self.DB = vvf_io.read_csv_vigili(args.organico_fn)
+		self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
+		self.DB = vvf_io.correggi_aspiranti(self.DB, self.data_inizio, self.data_fine)
 		self.vigili = list(self.DB.keys())
 		self.vigili_squadra = {}
 		self.vigili_gruppi_festivo = {}
@@ -145,9 +143,9 @@ class TurnazioneVVF:
 		self.anno = self.data_inizio.year
 		num_giorni = self._getOffsetFromDate(self.data_fine)
 		giorno = 0
-		curr_squadra = squadra_di_partenza
-		if squadra_di_partenza not in self.vigili_squadra.keys():
-			print ("ERRORE: squadra iniziale {} inesistente!".format(squadra_di_partenza))
+		curr_squadra = args.squadra_di_partenza
+		if curr_squadra not in self.vigili_squadra.keys():
+			print ("ERRORE: squadra iniziale {} inesistente!".format(curr_squadra))
 			exit(-1)
 
 		### FASE 1 ###
@@ -300,9 +298,15 @@ class TurnazioneVVF:
 			for festivo in self.var_festivi_vigile.keys():
 				self.constr_festivi_vigile[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
 
-			#CONSTR: max 3 NOTTI per comandante e vice
-			if self.DB[vigile].grado in ["Comandante", "Vicecomandante"]:
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_notti_graduati_comandanti({})".format(vigile))
+			#CONSTR: max 3 NOTTI per comandante
+			if self.DB[vigile].grado in ["Comandante"]:
+				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_notti_graduati_comandante({})".format(vigile))
+				for giorno in range(len(self.var_notti.keys())):
+					self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+
+			#CONSTR: max 4 NOTTI per vicecomandante
+			if self.DB[vigile].grado in ["Viceomandante"]:
+				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_notti_graduati_vicecomandante({})".format(vigile))
 				for giorno in range(len(self.var_notti.keys())):
 					self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
@@ -312,39 +316,18 @@ class TurnazioneVVF:
 				for festivo in self.var_festivi_vigile.keys():
 					self.constr_festivi_graduati[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
 
-			#CONSTR: max 5 NOTTI per capiplotone
-			if self.DB[vigile].grado=="Capoplotone":
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 5, "constr_notti_graduati_capiplotone({})".format(vigile))
+			#CONSTR: max 7 NOTTI per capiplotone e capisquadra
+			if self.DB[vigile].grado in ["Capoplotone", "Caposquadra"]:
+				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 7, "constr_notti_graduati_capi({})".format(vigile))
 				for giorno in range(len(self.var_notti.keys())):
 					if vigile in self.var_notti[giorno].keys():
 						self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
-			#CONSTR: max 4 FESTIVI per direttivo e capisquadra
-			if self.DB[vigile].grado in ["Capoplotone", "Caposquadra", "Segretario", "Cassiere", "Magazziniere"]:
-				self.constr_festivi_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_festivi_graduati_direttivo_capisquadra({})".format(vigile))
+			#CONSTR: max 4 FESTIVI per capiplotone e capisquadra
+			if self.DB[vigile].grado in ["Capoplotone", "Caposquadra"]:
+				self.constr_festivi_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_festivi_graduati_capi({})".format(vigile))
 				for festivo in self.var_festivi_vigile.keys():
 					self.constr_festivi_graduati[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
-
-			#CONSTR: max 6 NOTTI per capisquadra
-			if self.DB[vigile].grado=="Caposquadra":
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 6, "constr_notti_graduati_capisquadra({})".format(vigile))
-				for giorno in range(len(self.var_notti.keys())):
-					if vigile in self.var_notti[giorno].keys():
-						self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
-
-			#CONSTR: max 3 NOTTI per direttivo
-			if self.DB[vigile].grado in ["Segretario", "Cassiere", "Magazziniere"]:
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_notti_graduati_direttivo({})".format(vigile))
-				for giorno in range(len(self.var_notti.keys())):
-					if vigile in self.var_notti[giorno].keys():
-						self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
-
-			#CONSTR: max 6 NOTTI per resp. allievi e vicemagazziniere
-			if self.DB[vigile].grado in ["Resp. Allievi", "Vicemagazziniere"]:
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 6, "constr_notti_graduati_respallievi_vicemagazziniere({})".format(vigile))
-				for giorno in range(len(self.var_notti.keys())):
-					if vigile in self.var_notti[giorno].keys():
-						self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 			#CONSTR: almeno 15 notti per esenti CP
 			if self.DB[vigile].esente_cp and not self.DB[vigile].Aspirante() and not self.DB[vigile].EsenteNotti():
@@ -381,12 +364,20 @@ class TurnazioneVVF:
 			#ECCEZIONI alle regole usuali
 			if len(self.DB[vigile].eccezzioni) > 0:
 
-				#CONSTR_EX: NOTTI solo il sabato
-				if "NottiSoloSabato" in self.DB[vigile].eccezzioni:
-					self.constr_ex_notti_solo_sabato[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_notti_solo_sabato_vigile({})".format(vigile))
-					for giorno in self.var_notti.keys():
-						if vigile in self.var_notti[giorno] and self._getWeekdayFromOffset(giorno) != 5:
-							self.constr_ex_notti_solo_sabato[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+				#CONSTR_EX: max 5 NOTTI per direttivo, altre cariche:
+				carica_direttivo_altro = [c for c in self.DB[vigile].eccezzioni if c in ["Segretario", "Cassiere", "Magazziniere", "Resp. Allievi", "Vicemagazziniere"]] #TODO: check vicemagazziniere
+				if len(carica_direttivo_altro) > 0:
+					self.constr_ex_notti_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 5, "constr_ex_notti_direttivo({})".format(vigile))
+					for giorno in range(len(self.var_notti.keys())):
+						if vigile in self.var_notti[giorno].keys():
+							self.constr_ex_notti_direttivo[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+
+				#CONSTR_EX: max 4 FESTIVI per altre cariche direttivo
+				carica_direttivo = [c for c in self.DB[vigile].eccezzioni if c in ["Segretario", "Cassiere", "Magazziniere"]]
+				if len(carica_direttivo) > 0:
+					self.constr_ex_festivi_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_ex_festivi_direttivo({})".format(vigile))
+					for festivo in self.var_festivi_vigile.keys():
+						self.constr_ex_festivi_direttivo[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
 
 				#CONSTR_EX: NOTTI solo il sabato o FESTIVI
 				if "NottiSoloSabatoFestivi" in self.DB[vigile].eccezzioni:
@@ -395,32 +386,14 @@ class TurnazioneVVF:
 						if vigile in self.var_notti[giorno] and self._getWeekdayFromOffset(giorno) != 5 and giorno not in self.var_festivi_vigile.keys():
 							self.constr_ex_notti_solo_sabato_festivi[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
-				#CONSTR_EX: NOTTI solo il lunedì
-				if "NottiSoloLun" in self.DB[vigile].eccezzioni:
-					self.constr_ex_notti_solo_lun[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_notti_solo_lun_vigile({})".format(vigile))
+				#CONSTR_EX: no notti in specifici giorni della settimana
+				giorni_da_saltare = [_GIORNO_TO_NUM[e[len("NoNotti"):]] for e in self.DB[vigile].eccezzioni if "NoNotti" in e]
+				if len(giorni_da_saltare) > 0:
+					self.constr_ex_no_notti_giornosettimana[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_no_notti_giornosettimana_vigile({})".format(vigile))
 					for giorno in self.var_notti.keys():
-						if vigile in self.var_notti[giorno] and self._getWeekdayFromOffset(giorno) != 0:
-							self.constr_ex_notti_solo_lun[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
-
-				#CONSTR_EX: NOTTI solo il martedì o venerdì
-				if "NottiSoloMarVen" in self.DB[vigile].eccezzioni:
-					self.constr_ex_notti_solo_mar_ven[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_notti_solo_mar_ven_vigile({})".format(vigile))
-					for giorno in self.var_notti.keys():
-						if vigile in self.var_notti[giorno] and self._getWeekdayFromOffset(giorno) not in [1, 4]:
-							self.constr_ex_notti_solo_mar_ven[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
-
-				#CONSTR_EX: servizi solo i primi 6 mesi
-				if "ServiziSoloPrimi6Mesi" in self.DB[vigile].eccezzioni:
-					self.constr_ex_servizi_primi_6_mesi[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_ex_servizi_primi_6_mesi_vigile({})".format(vigile))
-					limite = self._getOffsetFromDate(dt.date(self.anno, 6, 30))
-					for giorno in range(limite, num_giorni):
-						if vigile in self.var_notti[giorno]:
-							self.constr_ex_servizi_primi_6_mesi[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
-						if giorno in self.var_sabati.keys():
-							if vigile in self.var_sabati[giorno]:
-								self.constr_ex_servizi_primi_6_mesi[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
-						elif giorno in self.var_festivi_vigile.keys():
-							self.constr_ex_servizi_primi_6_mesi[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
+						if self._getWeekdayFromOffset(giorno) in giorni_da_saltare:
+							if vigile in self.var_notti[giorno]:
+								self.constr_ex_no_notti_giornosettimana[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 				#CONSTR_EX: no servizi specifico mese
 				mesi_da_saltare = [int(e[len("NoServiziMese"):]) for e in self.DB[vigile].eccezzioni if "NoServiziMese" in e]
@@ -531,11 +504,11 @@ class TurnazioneVVF:
 		# model_f.write(Solver.ExportModelAsMpsFormat(True, False))
 		model_f.close()
 
-	def Solve(self, time_limit, verbose=False):
+	def Solve(self, time_limit, verbose=False, num_threads=1):
 		#Solver Parameters
 		if verbose:
 			self.solver.EnableOutput()
-		self.solver.SetNumThreads(_NUM_THREADS)
+		self.solver.SetNumThreads(num_threads)
 		self.solver.SetTimeLimit(time_limit) #ms
 		print("Risolvo il modello... (max {}s)".format(int(float(time_limit)/1000)))
 		self.STATUS = self.solver.Solve()
@@ -565,10 +538,11 @@ class TurnazioneVVF:
 						self.DB[vigile].festivi += int(self.var_festivi_vigile[giorno][vigile].solution_value())
 						if giorno in self._FESTIVI_ONEROSI and self.var_festivi_vigile[giorno][vigile].solution_value() == 1:
 							self.DB[vigile].servizi_onerosi += 1
-				line = "Vigile {} ({} {}, {}".format(vigile, self.DB[vigile].nome, self.DB[vigile].cognome, self.DB[vigile].grado)
+				line = "{:03d}-{}".format(vigile, self.DB[vigile].grado)
 				if self.DB[vigile].aspirante_passa_a_vigile:
 					line += "*"
-				line += "): {}".format(int(self.var_servizi_vigile[vigile].solution_value()))
+				# line += " {} {}".format(self.DB[vigile].nome, self.DB[vigile].cognome)
+				line += ": {}".format(int(self.var_servizi_vigile[vigile].solution_value()))
 				line += "\n\tNotti: {}\n\tSabati: {}\n\tFestivi: {}".format(self.DB[vigile].notti, self.DB[vigile].sabati, self.DB[vigile].festivi)
 				if len(self.DB[vigile].eccezzioni) > 0:
 					line += "\n\tEccezioni: {}".format(self.DB[vigile].eccezzioni)
@@ -654,3 +628,13 @@ def _calc_easter(year):
     month = f // 31
     day = f % 31 + 1
     return dt.date(year, month, day)
+
+_GIORNO_TO_NUM = {
+	"Lun": 0,
+	"Mar": 1,
+	"Mer": 2,
+	"Gio": 3,
+	"Ven": 4,
+	"Sab": 5,
+	"Dom": 6,
+	}

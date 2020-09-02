@@ -9,22 +9,27 @@ _GRADI_VALIDI = [
 	"Caposquadra",
 	"Vigile",
 	"Aspirante",
-	"Segretario",
-	"Cassiere",
-	"Magazziniere",
-	"Vicemagazziniere",
-	"Resp. Allievi",
 	"Ispettore",
 	"Presidente",
 	]
 
 _ECCEZZIONI_VALIDE = [
+	# Cariche
+	"Segretario",
+	"Cassiere",
+	"Magazziniere",
+	"Vicemagazziniere",
+	"Resp. Allievi",
+	# Esenzioni
 	"EsenteCP",
-	"NottiSoloSabato",
 	"NottiSoloSabatoFestivi",
-	"NottiSoloLun",
-	"NottiSoloMarVen",
-	"ServiziSoloPrimi6Mesi",
+	"NoNottiLun",
+	"NoNottiMar",
+	"NoNottiMer",
+	"NoNottiGio",
+	"NoNottiVen",
+	"NoNottiSab",
+	"NoNottiDom",
 	"NoServiziMese1",
 	"NoServiziMese2",
 	"NoServiziMese3",
@@ -47,7 +52,7 @@ class Vigile:
 	grado = "Vigile"
 	squadra = 0
 	gruppo_festivo = 0
-	eccezzioni = []
+	eccezzioni = set()
 	notti = 0
 	sabati = 0
 	festivi = 0
@@ -72,7 +77,7 @@ class Vigile:
 		self.gruppo_festivo = int(args[0][5])
 		if self.grado == "Aspirante" and len(args[0][6]) > 0:
 			self.data_passaggio_vigile = dt.datetime.strptime(args[0][6], '%d/%m/%Y').date()
-		self.eccezzioni = args[0][7].split(",")
+		self.eccezzioni = set(args[0][7].split(","))
 		if '' in self.eccezzioni:
 			self.eccezzioni.remove('')
 		for e in self.eccezzioni:
@@ -134,7 +139,7 @@ class Vigile:
 	def NumeroServizi(self):
 		return self.notti + self.sabati + self.festivi
 
-def read_csv_vigili(filename="./vigili.csv"):
+def read_csv_vigili(filename):
 	db = {}
 	if not os.path.isfile(filename):
 		print("ERRORE: il file {} che descrive i vigili non esiste!".format(filename))
@@ -152,7 +157,7 @@ def read_csv_vigili(filename="./vigili.csv"):
 	fi.close()
 	return db
 
-def read_csv_riporti(db, filename="./riporti.csv"):
+def read_csv_riporti(db, filename):
 	if not os.path.isfile(filename):
 		print("ATTENZIONE: il file {} che descrive i riporti dello scorso anno non esiste!".format(filename))
 		print("\tContinuo senza.")
