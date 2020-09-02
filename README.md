@@ -15,7 +15,8 @@ Mentre su Windows si vedano i link di cui sopra.
 ```
 python main.py data_di_inizio data_di_fine squadra_di_partenza 
 ```
-Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 15 gennaio 2021 a venerdì 14 gennaio 2022 con la squadra 3 reperibile per la prima settimana (e le altre a rotazione).
+Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 15 gennaio 2021 a venerdì 14 gennaio 2022 con la squadra 3 reperibile per la prima settimana, consumando i file di organico e riporti di default.
+
 ### Argomenti
 ```
   data_di_inizio        Data di inizio, che dev'essere un venerdì
@@ -25,22 +26,20 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   squadra_di_partenza   Squadra reperibile per la prima settimana
                         Default: 1
 ```
+
 ### Opzioni
 ```
   -h, --help            Mostra le opzioni d'uso (in inglese)
   -c, --servizi-compleanno
-                        Abilita l'assegnazione di servizi il giorno di
-                        compleanno
-  -j JOBS, --jobs JOBS  numero di thread paralleli per la risoluzione del modello
+                        Abilita l'assegnazione di servizi il giorno di compleanno
+  -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello
                         Default: 3
-  -l, --loose           Abilita l'assegnazione di notturni al di fuori della
-                        settimana di reperibilità
+  -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
                         Default: organico.csv
   -r RIPORTI_FN, --riporti-fn RIPORTI_FN
-                        Percorso del file CSV contenente i riporti dei turni
-                        extra od onerosi svolti negli anni precedenti
+                        Percorso del file CSV contenente i riporti dei turni extra od onerosi svolti negli anni precedenti
                         Default: riporti.csv
   -t TIME_LIMIT, --time-limit TIME_LIMIT
                         Tempo limite in ms
