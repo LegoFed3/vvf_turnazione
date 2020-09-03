@@ -21,6 +21,7 @@ _ECCEZZIONI_VALIDE = [
 	"Vicemagazziniere",
 	"Resp. Allievi",
 	# Esenzioni
+	"Aspettativa",
 	"EsenteCP",
 	"NottiSoloSabatoFestivi",
 	"NoNottiLun",
@@ -45,6 +46,7 @@ _ECCEZZIONI_VALIDE = [
 	]
 
 class Vigile:
+	id = 0
 	nome = ""
 	cognome = ""
 	data_di_nascita = dt.date(1900, 1, 1)
@@ -64,28 +66,34 @@ class Vigile:
 	servizi_onerosi = 0
 
 	def __init__(self, *args):
-		self.nome = args[0][0]
-		self.cognome = args[0][1]
-		self.data_di_nascita = dt.datetime.strptime(args[0][2], '%d/%m/%Y').date()
-		self.grado = args[0][3]
+		self.id = int(args[0][0])
+		self.nome = args[0][1]
+		self.cognome = args[0][2]
+		self.data_di_nascita = dt.datetime.strptime(args[0][3], '%d/%m/%Y').date()
+		self.grado = args[0][4]
 		if self.grado not in _GRADI_VALIDI:
 			print("ERRORE! Grado sconosciuto: ", self.grado)
 			exit(-1)
-		self.squadra = int(args[0][4])
+		self.squadra = int(args[0][5])
 		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
 			self.squadra = 0
-		self.gruppo_festivo = int(args[0][5])
-		if self.grado == "Aspirante" and len(args[0][6]) > 0:
-			self.data_passaggio_vigile = dt.datetime.strptime(args[0][6], '%d/%m/%Y').date()
-		self.eccezzioni = set(args[0][7].split(","))
+		self.gruppo_festivo = int(args[0][6])
+		if self.grado == "Aspirante" and len(args[0][7]) > 0:
+			self.data_passaggio_vigile = dt.datetime.strptime(args[0][7], '%d/%m/%Y').date()
+		self.eccezzioni = set(args[0][8].split(","))
 		if '' in self.eccezzioni:
 			self.eccezzioni.remove('')
+		# Verifiche
 		for e in self.eccezzioni:
 			if e not in _ECCEZZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
 			elif e == "EsenteCP":
 				self.esente_cp = True
+		if "Aspettativa" in self.eccezzioni and self.gruppo_festivo != 0:
+			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
+		if "Aspettativa" in self.eccezzioni and self.squadra != 0:
+			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadra))
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -101,17 +109,24 @@ class Vigile:
 		return self.__str__()
 
 	def EsenteNotti(self):
-		if self.grado in ["Ispettore", "Presidente"]:
+		if (self.grado in ["Ispettore", "Presidente"]
+			or "Aspettativa" in self.eccezzioni
+			):
 			return True
 		return False
 
 	def EsenteSabati(self):
-		if self.grado in ["Ispettore", "Presidente"]:
+		if (self.grado in ["Ispettore", "Presidente"]
+			or "Aspettativa" in self.eccezzioni
+			):
 			return True
 		return False
 
 	def EsenteFestivi(self):
-		if self.grado in ["Ispettore", "Presidente"] or self.gruppo_festivo == 0:
+		if (self.grado in ["Ispettore", "Presidente"]
+			or "Aspettativa" in self.eccezzioni
+			or self.gruppo_festivo == 0
+			):
 			return True
 		return False
 
@@ -142,7 +157,7 @@ class Vigile:
 def read_csv_vigili(filename):
 	db = {}
 	if not os.path.isfile(filename):
-		print("ERRORE: il file {} che descrive i vigili non esiste!".format(filename))
+		print("ERRORE: il file '{}' che descrive i vigili non esiste!".format(filename))
 		print("\tImpossibile continuare senza.")
 		exit(-1)
 	fi = open(filename, "r")
@@ -153,13 +168,13 @@ def read_csv_vigili(filename):
 			line = line.strip("\n\r").split(";")
 			# line = list(filter(lambda x: x != '', line))
 			if len(line) > 0:
-				db[int(line[0])] = Vigile(line[1:])
+				db[int(line[0])] = Vigile(line[0:])
 	fi.close()
 	return db
 
 def read_csv_riporti(db, filename):
 	if not os.path.isfile(filename):
-		print("ATTENZIONE: il file {} che descrive i riporti dello scorso anno non esiste!".format(filename))
+		print("ATTENZIONE: il file '{}' che descrive i riporti dello scorso anno non esiste!".format(filename))
 		print("\tContinuo senza.")
 		return db
 	fi = open(filename, "r")

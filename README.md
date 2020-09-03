@@ -58,7 +58,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Data Passaggio a Vigile*: per gli aspiranti, determine quanti servizi assegnare perl'anno del passaggio e quando assegnarli. Dev'essere nel formato GG/MM/AAAA.
 	* *Eccezioni*: lista separata da virgola (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
 		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
-		* Altre richieste: EsenteCP, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12.
+		* Altre richieste: Aspettativa, EsenteCP, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12.
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi svolti negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media: intero (potenzialmente negativo) indicante qualora il vigile (che non ricopre cariche particolari) abbia svolto più o meno servizi della media nell'anno precedente.

@@ -44,5 +44,5 @@ model = vvf.TurnazioneVVF(args)
 model.Solve(args.time_limit, args.verbose, args.jobs)
 
 model.SaveSolution()
-print("\nPremere INVIO per uscire.")
+print("\nPremi INVIO per uscire.")
 input()
