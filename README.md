@@ -56,11 +56,12 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Eccezioni*: lista separata da virgola (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
 		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
 		* Altre richieste: Aspettativa, EsenteCP, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12.
-* *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi svolti negli ultimi anni. Il file è strutturato come segue:
+* *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
-	* *Servizi Extra Media: intero (potenzialmente negativo) indicante qualora il vigile (che non ricopre cariche particolari) abbia svolto più o meno servizi della media nell'anno precedente.
-	* *Sabati*: 5 colonne indicani il numero di sabati svolti nei 5 anni precedenti.
-	* *Servizi Onerosi*: 5 colonne indicani il numero di servizi onerosi svolti nei 5 anni precedenti.
+	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.
+	* *Capodanni*: numero di capodanni assegnati negli anni precedenti.
+	* *Sabati*: 5 colonne indicanti il numero di sabati assegnati nei 5 anni precedenti.
+	* *Servizi Onerosi*: 5 colonne indicanti il numero di servizi onerosi assegnati nei 5 anni precedenti.
 
 ## Output
 Il programma produce due file:
