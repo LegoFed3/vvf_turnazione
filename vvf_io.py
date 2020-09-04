@@ -58,9 +58,11 @@ class Vigile:
 	notti = 0
 	sabati = 0
 	festivi = 0
+	capodanno = 0
 	passato_servizi_onerosi = [0]*5
 	passato_sabati = [0]*5
 	passato_servizi_extra = 0
+	passato_capodanni = 0
 	esente_cp = False
 	aspirante_passa_a_vigile = False
 	servizi_onerosi = 0
@@ -111,6 +113,7 @@ class Vigile:
 	def EsenteNotti(self):
 		if (self.grado in ["Ispettore", "Presidente"]
 			or "Aspettativa" in self.eccezzioni
+			or self.Aspirante()
 			):
 			return True
 		return False
@@ -118,6 +121,7 @@ class Vigile:
 	def EsenteSabati(self):
 		if (self.grado in ["Ispettore", "Presidente"]
 			or "Aspettativa" in self.eccezzioni
+			or self.Aspirante()
 			):
 			return True
 		return False
@@ -126,6 +130,7 @@ class Vigile:
 		if (self.grado in ["Ispettore", "Presidente"]
 			or "Aspettativa" in self.eccezzioni
 			or self.gruppo_festivo == 0
+			# or self.Aspirante()
 			):
 			return True
 		return False
@@ -136,7 +141,17 @@ class Vigile:
 		return False
 
 	def Graduato(self):
-		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "CapoSQUADRA"]:
+		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]:
+			return True
+		return False
+
+	def AltreCariche(self):
+		if ("Segretario" in self.eccezzioni
+			or "Cassiere" in self.eccezzioni
+			or "Magazziniere" in self.eccezzioni
+			or "Vicemagazziniere" in self.eccezzioni
+			or "Resp. Allievi" in self.eccezzioni
+			):
 			return True
 		return False
 
@@ -185,8 +200,9 @@ def read_csv_riporti(db, filename):
 			line = line.strip("\n\r").split(";")
 			if len(line) > 0:
 				db[int(line[0])].passato_servizi_extra = int(line[1])
-				db[int(line[0])].passato_sabati = list(map(lambda x: int(x), line[2:7]))
-				db[int(line[0])].passato_servizi_onerosi = list(map(lambda x: int(x), line[7:11]))
+				db[int(line[0])].passato_capodanni = int(line[2])
+				db[int(line[0])].passato_sabati = list(map(lambda x: int(x), line[3:8]))
+				db[int(line[0])].passato_servizi_onerosi = list(map(lambda x: int(x), line[8:12]))
 	fi.close()
 	return db
 

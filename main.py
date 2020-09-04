@@ -10,13 +10,16 @@ parser = argparse.ArgumentParser(description="Compute yearly shifts for voluntee
 #Positional Arguments
 parser.add_argument("data_di_inizio", type=vvfio.date,
 					help="start date, which must be a Friday (Default: 2021-1-15)",
-					nargs='?', default="2021-1-15")
+					# nargs='?', default="2021-1-15"
+					)
 parser.add_argument("data_di_fine", type=vvfio.date,
 					help="end date, which must be a Friday (Default: 2022-1-14)",
-					nargs='?', default="2022-1-14")
+					# nargs='?', default="2022-1-14"
+					)
 parser.add_argument("squadra_di_partenza", type=int,
 					help="starting squad for weekly availability (Default: 1)",
-					nargs='?', default="1")
+					# nargs='?', default="1"
+					)
 
 #Optional Arguments
 parser.add_argument("-c", "--servizi-compleanno",
@@ -44,5 +47,6 @@ model = vvf.TurnazioneVVF(args)
 model.Solve(args.time_limit, args.verbose, args.jobs)
 
 model.SaveSolution()
-print("\nPremi INVIO per uscire.")
-input()
+print("Finito.")
+# print("\nPremi INVIO per uscire.")
+# input()

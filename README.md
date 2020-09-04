@@ -20,11 +20,8 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
 ### Argomenti
 ```
   data_di_inizio        Data di inizio, che dev'essere un venerdì
-                        Default: 2021-1-15
   data_di_fine          Data di fine, che dev'essere un venerdì
-                        Default: 2022-1-14
   squadra_di_partenza   Squadra reperibile per la prima settimana
-                        Default: 1
 ```
 
 ### Opzioni
