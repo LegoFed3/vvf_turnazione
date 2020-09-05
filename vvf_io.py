@@ -59,13 +59,13 @@ class Vigile:
 	sabati = 0
 	festivi = 0
 	capodanno = 0
-	passato_servizi_onerosi = [0]*5
+	festivi_onerosi = 0
+	passato_festivi_onerosi = [0]*5
 	passato_sabati = [0]*5
 	passato_servizi_extra = 0
 	passato_capodanni = 0
 	esente_cp = False
 	aspirante_passa_a_vigile = False
-	servizi_onerosi = 0
 
 	def __init__(self, *args):
 		self.id = int(args[0][0])
@@ -199,7 +199,7 @@ def read_csv_riporti(db, filename):
 				db[int(line[0])].passato_servizi_extra = int(line[1])
 				db[int(line[0])].passato_capodanni = int(line[2])
 				db[int(line[0])].passato_sabati = list(map(lambda x: int(x), line[3:8]))
-				db[int(line[0])].passato_servizi_onerosi = list(map(lambda x: int(x), line[8:12]))
+				db[int(line[0])].passato_festivi_onerosi = list(map(lambda x: int(x), line[8:12]))
 	fi.close()
 	return db
 
