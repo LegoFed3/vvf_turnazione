@@ -110,28 +110,25 @@ class Vigile:
 	def __repr__(self):
 		return self.__str__()
 
-	def EsenteNotti(self):
+	def EsenteServizi(self):
 		if (self.grado in ["Ispettore", "Presidente"]
 			or "Aspettativa" in self.eccezzioni
-			or self.Aspirante()
 			):
+			return True
+		return False
+
+	def EsenteNotti(self):
+		if self.EsenteServizi() or self.Aspirante():
 			return True
 		return False
 
 	def EsenteSabati(self):
-		if (self.grado in ["Ispettore", "Presidente"]
-			or "Aspettativa" in self.eccezzioni
-			or self.Aspirante()
-			):
+		if self.EsenteServizi() or self.Aspirante():
 			return True
 		return False
 
 	def EsenteFestivi(self):
-		if (self.grado in ["Ispettore", "Presidente"]
-			or "Aspettativa" in self.eccezzioni
-			or self.gruppo_festivo == 0
-			# or self.Aspirante()
-			):
+		if self.EsenteServizi() or self.gruppo_festivo == 0:
 			return True
 		return False
 
