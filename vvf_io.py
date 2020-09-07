@@ -43,6 +43,8 @@ _ECCEZZIONI_VALIDE = [
 	"NoServiziMese10",
 	"NoServiziMese11",
 	"NoServiziMese12",
+	"NottiAncheFuoriSettimana",
+	"FestiviComunque",
 	]
 
 class Vigile:
@@ -54,7 +56,7 @@ class Vigile:
 	grado = "Vigile"
 	squadra = 0
 	gruppo_festivo = 0
-	eccezzioni = set()
+	eccezioni = set()
 	notti = 0
 	sabati = 0
 	festivi = 0
@@ -82,19 +84,19 @@ class Vigile:
 		self.gruppo_festivo = int(args[0][6])
 		if self.grado == "Aspirante" and len(args[0][7]) > 0:
 			self.data_passaggio_vigile = dt.datetime.strptime(args[0][7], '%d/%m/%Y').date()
-		self.eccezzioni = set(args[0][8].split(","))
-		if '' in self.eccezzioni:
-			self.eccezzioni.remove('')
+		self.eccezioni = set(args[0][8].split(","))
+		if '' in self.eccezioni:
+			self.eccezioni.remove('')
 		# Verifiche
-		for e in self.eccezzioni:
+		for e in self.eccezioni:
 			if e not in _ECCEZZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
 			elif e == "EsenteCP":
 				self.esente_cp = True
-		if "Aspettativa" in self.eccezzioni and self.gruppo_festivo != 0:
+		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
-		if "Aspettativa" in self.eccezzioni and self.squadra != 0:
+		if "Aspettativa" in self.eccezioni and self.squadra != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadra))
 
 	def __str__(self): # Called by print()
@@ -112,7 +114,7 @@ class Vigile:
 
 	def EsenteServizi(self):
 		if (self.grado in ["Ispettore", "Presidente"]
-			or "Aspettativa" in self.eccezzioni
+			or "Aspettativa" in self.eccezioni
 			):
 			return True
 		return False
@@ -143,11 +145,11 @@ class Vigile:
 		return False
 
 	def AltreCariche(self):
-		if ("Segretario" in self.eccezzioni
-			or "Cassiere" in self.eccezzioni
-			or "Magazziniere" in self.eccezzioni
-			or "Vicemagazziniere" in self.eccezzioni
-			or "Resp. Allievi" in self.eccezzioni
+		if ("Segretario" in self.eccezioni
+			or "Cassiere" in self.eccezioni
+			or "Magazziniere" in self.eccezioni
+			or "Vicemagazziniere" in self.eccezioni
+			or "Resp. Allievi" in self.eccezioni
 			):
 			return True
 		return False
