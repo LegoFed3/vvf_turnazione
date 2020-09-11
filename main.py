@@ -11,6 +11,6 @@ model = vvf.TurnazioneVVF(args)
 model.Solve(args.time_limit, args.verbose, args.jobs)
 
 model.SaveSolution()
-print("Dati salvato in Turni_{}.csv e Riporti_{}.csv.".format(model.anno, model.anno))
+print("Dati salvato in turni_{}.csv e riporti_{}.csv.".format(model.anno, model.anno))
 # print("\nPremi INVIO per uscire.")
 # input()

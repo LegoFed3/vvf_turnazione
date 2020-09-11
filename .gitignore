@@ -134,3 +134,4 @@ out
 turni_*.csv
 riporti_*.csv
 organico_*.csv
+run.sh
