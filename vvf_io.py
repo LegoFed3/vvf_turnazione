@@ -230,16 +230,13 @@ class VVFParser(argparse.ArgumentParser):
 
 		#Positional Arguments
 		self.add_argument("data_di_inizio", type=date,
-							help="start date, which must be a Friday (Default: 2021-1-15)",
-							# nargs='?', default="2021-1-15"
+							help="start date, which must be a Friday",
 							)
 		self.add_argument("data_di_fine", type=date,
-							help="end date, which must be a Friday (Default: 2022-1-14)",
-							# nargs='?', default="2022-1-14"
+							help="end date, which must be a Friday",
 							)
 		self.add_argument("squadra_di_partenza", type=int,
-							help="starting squad for weekly availability (Default: 1)",
-							# nargs='?', default="1"
+							help="starting squad for weekly availability",
 							)
 
 		#Optional Arguments
