@@ -502,8 +502,6 @@ class TurnazioneVVF:
 			if self.DB[vigile].aspirante_passa_a_vigile:
 				mul_notti *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
 				mul_sabati *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
-			# if self.DB[vigile].esente_cp:
-				 # *= 0.5
 			compleanno = self.DB[vigile].OffsetCompleanno(self.data_inizio)
 			for giorno in range(len(self.var_notti.keys())):
 				mul_notte_squadra = 1
@@ -661,7 +659,7 @@ class TurnazioneVVF:
 
 			# Riporta il numero di servizi extra ed i servizi speciali
 			out = open("./riporti_{}.csv".format(self.anno), "w")
-			out.write("#Vigile;Servizi Extra Media;Capodanni;Sabati;;;;;Festivi Onerosi\n")
+			out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;Festivi Onerosi\n")
 			for vigile in self.vigili:
 				line = "{};".format(vigile)
 				servizi_extra = 0

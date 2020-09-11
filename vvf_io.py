@@ -223,3 +223,42 @@ def date(string):
 	except:
 		msg = "{} is not a valid date string (expected format: YYYY-MM-DD)".format(string)
 		raise argparse.ArgumentTypeError(msg)
+
+class VVFParser(argparse.ArgumentParser):
+	def __init__(self):
+		super().__init__(description="Compute yearly shifts for volunteer firefighters")
+
+		#Positional Arguments
+		self.add_argument("data_di_inizio", type=date,
+							help="start date, which must be a Friday (Default: 2021-1-15)",
+							# nargs='?', default="2021-1-15"
+							)
+		self.add_argument("data_di_fine", type=date,
+							help="end date, which must be a Friday (Default: 2022-1-14)",
+							# nargs='?', default="2022-1-14"
+							)
+		self.add_argument("squadra_di_partenza", type=int,
+							help="starting squad for weekly availability (Default: 1)",
+							# nargs='?', default="1"
+							)
+
+		#Optional Arguments
+		self.add_argument("-c", "--servizi-compleanno",
+							help="enable assigning shifts on firefighter's birthdays",
+							action="store_true")
+		self.add_argument("-j", "--jobs", type=int,
+							help="number of parallel threads to solve the model (Default: 3)",
+							default="3")
+		self.add_argument("-l", "--loose",
+							help="enable assigning night shifts outside weekly availability",
+							action="store_true")
+		self.add_argument("-o", "--organico-fn", type=str,
+							help="path to CSV containing the available firefigthers (Default: organico.csv)",
+							default="./organico.csv")
+		self.add_argument("-r", "--riporti-fn", type=str,
+							help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
+							default="./riporti.csv")
+		self.add_argument("-t", "--time-limit", type=int,
+							help="time limit in ms (Default: 300000)", default=300000)
+		self.add_argument("-v", "--verbose", help="enable verbose solver output",
+							action="store_true")
