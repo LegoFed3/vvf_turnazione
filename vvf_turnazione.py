@@ -11,6 +11,7 @@ class TurnazioneVVF:
 	var_notti = {}
 	constr_notti = {}
 	constr_notti_settimana_vigile = {}
+	constr_notti_consecutive_vigile = {}
 
 	var_sabati = {}
 	constr_sabati = {}
@@ -97,6 +98,7 @@ class TurnazioneVVF:
 			self._FESTIVI_SPECIALI[1], #Pasqua
 			self._FESTIVI_SPECIALI[6], #Ferragosto
 			self._FESTIVI_SPECIALI[9], #Natale
+			self._FESTIVI_SPECIALI[11], #1 Gennaio
 			]
 
 	def __init__(self, args):
@@ -296,6 +298,18 @@ class TurnazioneVVF:
 					if vigile in self.var_notti[giorno_prima].keys():
 						self.constr_festivi_notti_circostanti_vigile[vigile][festivo].SetCoefficient(self.var_notti[giorno_prima][vigile], 1)
 
+			#CONSTR: no 2 notti consecutive
+			self.constr_notti_consecutive_vigile[vigile] = {}
+			for notte in self.var_notti.keys():
+				if (
+					vigile in self.var_notti[notte].keys()
+					and notte+1 in self.var_notti.keys()
+					and vigile in self.var_notti[notte+1].keys()
+					):
+					self.constr_notti_consecutive_vigile[vigile][notte] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_notti_consecutive_vigile({})_giorno({}-{})".format(vigile, notte, notte+1))
+					self.constr_notti_consecutive_vigile[vigile][notte].SetCoefficient(self.var_notti[notte][vigile], 1)
+					self.constr_notti_consecutive_vigile[vigile][notte].SetCoefficient(self.var_notti[notte+1][vigile], 1)
+
 			#CONSTR: max 1 servizio oneroso l'anno
 			self.constr_servizi_onerosi_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_servizi_onerosi_vigile({})".format(vigile))
 			for festivo in self.var_festivi_vigile.keys():
@@ -333,7 +347,7 @@ class TurnazioneVVF:
 					self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 			#CONSTR: max 4 notti per vicecomandante
-			if self.DB[vigile].grado in ["Viceomandante"]:
+			if self.DB[vigile].grado in ["Vicecomandante"]:
 				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_notti_graduati_vicecomandante({})".format(vigile))
 				for giorno in range(len(self.var_notti.keys())):
 					self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
@@ -516,7 +530,7 @@ class TurnazioneVVF:
 					mul_festivi_onerosi = 1 + sum(self.DB[vigile].passato_festivi_onerosi)
 				if vigile in self.var_notti[giorno].keys():
 					if not (self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0):
-						mul_notte_squadra = 2 # Notti NON di squadra costano il doppio
+						mul_notte_squadra = 1.3 # Notti NON di squadra costano di più
 					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mul_compleanno * mul_notti * mul_notte_squadra + pen_notti_onerose)
 				if giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():

@@ -23,6 +23,7 @@ _ECCEZZIONI_VALIDE = [
 	# Esenzioni
 	"Aspettativa",
 	"EsenteCP",
+	"EsenteNotti",
 	"NottiSoloSabatoFestivi",
 	"NoNottiLun",
 	"NoNottiMar",
@@ -96,8 +97,12 @@ class Vigile:
 				self.esente_cp = True
 		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
+			self.gruppo_festivo = 0
+			print("\tIgnoro il gruppo festivo.")
 		if "Aspettativa" in self.eccezioni and self.squadra != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadra))
+			self.squadra = 0
+			print("\tIgnoro la squadra.")
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -120,7 +125,10 @@ class Vigile:
 		return False
 
 	def EsenteNotti(self):
-		if self.EsenteServizi() or self.Aspirante():
+		if (self.EsenteServizi() 
+			or self.Aspirante()
+			or "EsenteNotti" in self.eccezioni
+			):
 			return True
 		return False
 
