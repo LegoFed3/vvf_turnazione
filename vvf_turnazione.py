@@ -554,6 +554,8 @@ class TurnazioneVVF:
 		for var in self.var_cost_servizi_vigile.values():
 			objective.SetCoefficient(var, (len(self.vigili) - 1))
 		objective.SetMinimization()
+		#TODO: add -distance between selected services component?
+		#Quadratic term, e.g. 136 notte_136_vigile_1 - max(2 notte_2_vigile_1, 76 notte_76_vigile_1) * notte_136_vigile_1
 
 		print("* Il modello ha {} variabili e {} vincoli.".format(self.solver.NumVariables(), self.solver.NumConstraints()))
 
@@ -567,8 +569,9 @@ class TurnazioneVVF:
 		if verbose:
 			self.solver.EnableOutput()
 		self.solver.SetNumThreads(num_threads)
-		self.solver.SetTimeLimit(time_limit * 1000) #ms
-		print("Risolvo il modello... (max {}s)".format(time_limit))
+		if time_limit > 0:
+			self.solver.SetTimeLimit(time_limit * 1000) #ms
+		print("Risolvo il modello... (max {}s)".format(time_limit if time_limit > 0 else "∞"))
 		self.STATUS = self.solver.Solve()
 
 	def PrintSolution(self):

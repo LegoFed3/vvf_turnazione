@@ -256,6 +256,6 @@ class VVFParser(argparse.ArgumentParser):
 							help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
 							default="./riporti.csv")
 		self.add_argument("-t", "--time-limit", type=int,
-							help="time limit in seconds (Default: 300)", default=300)
+							help="time limit in seconds (Default: no limit)", default=0)
 		self.add_argument("-v", "--verbose", help="enable verbose solver output",
 							action="store_true")

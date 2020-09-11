@@ -40,7 +40,7 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
                         Default: riporti.csv
   -t TIME_LIMIT, --time-limit TIME_LIMIT
                         Tempo limite in secondi
-                        Default: 300
+                        Default: nessun limite
   -v, --verbose         Abilita l'output verboso del solver
 ```
 
