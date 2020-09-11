@@ -244,8 +244,8 @@ class VVFParser(argparse.ArgumentParser):
 							help="enable assigning shifts on firefighter's birthdays",
 							action="store_true")
 		self.add_argument("-j", "--jobs", type=int,
-							help="number of parallel threads to solve the model (Default: 3)",
-							default="3")
+							help="number of parallel threads to solve the model (Default: 1)",
+							default="1")
 		self.add_argument("-l", "--loose",
 							help="enable assigning night shifts outside weekly availability",
 							action="store_true")
@@ -256,6 +256,6 @@ class VVFParser(argparse.ArgumentParser):
 							help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
 							default="./riporti.csv")
 		self.add_argument("-t", "--time-limit", type=int,
-							help="time limit in ms (Default: 300000)", default=300000)
+							help="time limit in seconds (Default: 300)", default=300)
 		self.add_argument("-v", "--verbose", help="enable verbose solver output",
 							action="store_true")

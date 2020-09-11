@@ -567,8 +567,8 @@ class TurnazioneVVF:
 		if verbose:
 			self.solver.EnableOutput()
 		self.solver.SetNumThreads(num_threads)
-		self.solver.SetTimeLimit(time_limit) #ms
-		print("Risolvo il modello... (max {}s)".format(int(float(time_limit)/1000)))
+		self.solver.SetTimeLimit(time_limit * 1000) #ms
+		print("Risolvo il modello... (max {}s)".format(time_limit))
 		self.STATUS = self.solver.Solve()
 
 	def PrintSolution(self):

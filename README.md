@@ -30,7 +30,7 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -c, --servizi-compleanno
                         Abilita l'assegnazione di servizi il giorno di compleanno
   -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello
-                        Default: 3
+                        Default: 1
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
@@ -39,8 +39,8 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
                         Percorso del file CSV contenente i riporti dei turni extra od onerosi svolti negli anni precedenti
                         Default: riporti.csv
   -t TIME_LIMIT, --time-limit TIME_LIMIT
-                        Tempo limite in ms
-                        Default: 300000
+                        Tempo limite in secondi
+                        Default: 300
   -v, --verbose         Abilita l'output verboso del solver
 ```
 
