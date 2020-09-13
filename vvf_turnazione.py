@@ -113,10 +113,10 @@ class TurnazioneVVF:
 			print("ERRORE: il giorno di fine non è un venerdì!")
 			exit(-1)
 		if (self.data_fine - self.data_inizio).days > 400:
-			print("ERRORE: il periodo dal {} al {} è troppo lungo, sei sicuro sia giusto?".format(self.data_inizio, self.data_fine))
+			print("ERRORE: il periodo dal {} al {} è troppo lungo, sicuri sia giusto?".format(self.data_inizio, self.data_fine))
 			exit(-1)
 		elif (self.data_fine - self.data_inizio).days < 350:
-			print("ERRORE: il periodo dal {} al {} è troppo lungo, sei sicuro sia giusto?".format(self.data_inizio, self.data_fine))
+			print("ERRORE: il periodo dal {} al {} è troppo lungo, sicuri sia giusto?".format(self.data_inizio, self.data_fine))
 			exit(-1)
 		loose = args.loose
 		servizi_compleanno = args.servizi_compleanno
@@ -129,11 +129,12 @@ class TurnazioneVVF:
 		self.vigili_gruppi_festivo = {}
 		for vigile in self.vigili:
 			# Squadra
-			if self.DB[vigile].squadra == 0:
-				continue
-			elif self.DB[vigile].squadra not in self.vigili_squadra.keys():
-				self.vigili_squadra[self.DB[vigile].squadra] = []
-			self.vigili_squadra[self.DB[vigile].squadra].append(vigile)
+			for squadra in self.DB[vigile].squadre:
+				if squadra == 0:
+					continue
+				elif squadra not in self.vigili_squadra.keys():
+					self.vigili_squadra[squadra] = []
+				self.vigili_squadra[squadra].append(vigile)
 			# Gruppo Festivo
 			if self.DB[vigile].gruppo_festivo == 0:
 				continue
@@ -163,8 +164,8 @@ class TurnazioneVVF:
 				self.var_notti[curr_giorno] = {}
 				for vigile in self.vigili:
 					if (not self.DB[vigile].EsenteNotti()
-						and (self.DB[vigile].squadra == curr_squadra
-						or self.DB[vigile].squadra == 0
+						and (curr_squadra in self.DB[vigile].squadre
+						or 0 in self.DB[vigile].squadre
 						or curr_data == dt.date(self.anno,12,31) # Tutti candidati per capodanno
 						or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni
 						or loose)
@@ -529,7 +530,7 @@ class TurnazioneVVF:
 				if giorno in self._FESTIVI_ONEROSI:
 					mul_festivi_onerosi = 1 + sum(self.DB[vigile].passato_festivi_onerosi)
 				if vigile in self.var_notti[giorno].keys():
-					if not (self.giorno_squadra[giorno] == self.DB[vigile].squadra or self.DB[vigile].squadra == 0):
+					if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
 						mul_notte_squadra = 1.3 # Notti NON di squadra costano di più
 					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mul_compleanno * mul_notti * mul_notte_squadra + pen_notti_onerose)
 				if giorno in self.var_sabati.keys():

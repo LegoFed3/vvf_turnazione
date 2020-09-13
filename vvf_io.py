@@ -55,7 +55,7 @@ class Vigile:
 	data_di_nascita = dt.date(1900, 1, 1)
 	data_passaggio_vigile = dt.date(1900, 1, 1)
 	grado = "Vigile"
-	squadra = 0
+	squadre = []
 	gruppo_festivo = 0
 	eccezioni = set()
 	notti = 0
@@ -79,9 +79,9 @@ class Vigile:
 		if self.grado not in _GRADI_VALIDI:
 			print("ERRORE! Grado sconosciuto: ", self.grado)
 			exit(-1)
-		self.squadra = int(args[0][5])
+		self.squadre = list(map(int, args[0][5].split(",")))
 		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
-			self.squadra = 0
+			self.squadre = [0]
 		self.gruppo_festivo = int(args[0][6])
 		if self.grado == "Aspirante" and len(args[0][7]) > 0:
 			self.data_passaggio_vigile = dt.datetime.strptime(args[0][7], '%d/%m/%Y').date()
@@ -99,9 +99,9 @@ class Vigile:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
 			self.gruppo_festivo = 0
 			print("\tIgnoro il gruppo festivo.")
-		if "Aspettativa" in self.eccezioni and self.squadra != 0:
-			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadra))
-			self.squadra = 0
+		if "Aspettativa" in self.eccezioni and self.squadre != [0]:
+			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadre))
+			self.squadre = [0]
 			print("\tIgnoro la squadra.")
 
 	def __str__(self): # Called by print()
@@ -110,7 +110,7 @@ class Vigile:
 				self.cognome, 
 				self.data_di_nascita.strftime('%d/%m/%Y'), 
 				self.grado, 
-				self.squadra,
+				self.squadre,
 				self.gruppo_festivo
 				)
 
