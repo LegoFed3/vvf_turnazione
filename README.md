@@ -32,6 +32,8 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello
                         Default: 1
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
+  -m MEDIA_NOTTI, --media-notti MEDIA_NOTTI
+                        Numero medio di notti per vigile, abilita servizi extra per l'eccezione "PocheManovre"
   -n, --neo-vigili      Abilita l'assegnazione di una notte al mese per i primi due anni ai neo-vigili
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
@@ -56,7 +58,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Data Passaggio a Vigile*: per gli aspiranti, determine quanti servizi assegnare perl'anno del passaggio e quando assegnarli. Dev'essere nel formato GG/MM/AAAA.
 	* *Eccezioni*: lista separata da virgola (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
 		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
-		* Altre richieste: Aspettativa, EsenteCP, EsenteNotti, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, NottiAncheFuoriSettimana, FestiviComunque.
+		* Altre richieste: Aspettativa, EsenteCP, EsenteNotti, PocheManovre, NottiSoloSabatoFestivi, NoNottiLun, NoNottiMar, NoNottiMer, NoNottiGio, NoNottiVen, NoNottiSab, NoNottiDom, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, NottiAncheFuoriSettimana, FestiviComunque.
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.

@@ -25,6 +25,7 @@ _ECCEZZIONI_VALIDE = [
 	"Aspettativa",
 	"EsenteCP",
 	"EsenteNotti",
+	"PocheManovre",
 	"NottiSoloSabatoFestivi",
 	"NoNottiLun",
 	"NoNottiMar",
@@ -132,6 +133,7 @@ class Vigile:
 			or self.Aspirante()
 			or "EsenteNotti" in self.eccezioni
 			or self.grado == "Complemento"
+			or "Aspettativa" in self.eccezioni
 			):
 			return True
 		return False
@@ -140,12 +142,16 @@ class Vigile:
 		if (self.EsenteServizi()
 			or self.Aspirante()
 			or self.grado == "Complemento"
+			or "Aspettativa" in self.eccezioni
 			):
 			return True
 		return False
 
 	def EsenteFestivi(self):
-		if self.EsenteServizi() or self.gruppo_festivo == 0:
+		if (self.EsenteServizi()
+			or self.gruppo_festivo == 0
+			or "Aspettativa" in self.eccezioni
+			):
 			return True
 		return False
 
@@ -247,15 +253,9 @@ class VVFParser(argparse.ArgumentParser):
 		super().__init__(description="Compute yearly shifts for volunteer firefighters")
 
 		#Positional Arguments
-		self.add_argument("data_di_inizio", type=date,
-							help="start date, which must be a Friday",
-							)
-		self.add_argument("data_di_fine", type=date,
-							help="end date, which must be a Friday",
-							)
-		self.add_argument("squadra_di_partenza", type=int,
-							help="starting squad for weekly availability",
-							)
+		self.add_argument("data_di_inizio", type=date, help="start date, which must be a Friday")
+		self.add_argument("data_di_fine", type=date, help="end date, which must be a Friday")
+		self.add_argument("squadra_di_partenza", type=int, help="starting squad for weekly availability")
 
 		#Optional Arguments
 		self.add_argument("-c", "--servizi-compleanno",
@@ -267,6 +267,9 @@ class VVFParser(argparse.ArgumentParser):
 		self.add_argument("-l", "--loose",
 							help="enable assigning night shifts outside weekly availability",
 							action="store_true")
+		self.add_argument("-m", "--media-notti", type=int,
+							help="average number of night shifts for regular firefighters, if set enables the 'PocheManovre' exception",
+							default="-1")
 		self.add_argument("-n", "--neo-vigili",
 							help="assign extra shifts to firefighters in their first two years of full service",
 							action="store_true")
