@@ -130,7 +130,8 @@ class TurnazioneVVF:
 		loose = args.loose
 		servizi_compleanno = args.servizi_compleanno
 		servizi_neo_vigili = args.neo_vigili
-		num_medio_notti = args.media_notti
+		num_medio_notti = args.media_notti_festivi[0]
+		num_medio_festivi = args.media_notti_festivi[1]
 		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(args.organico_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
@@ -513,9 +514,9 @@ class TurnazioneVVF:
 						#CONSTR_EX: +1 festivo per vigili con poche manovre
 						if not self.DB[vigile].EsenteFestivi():
 							if self.DB[vigile].esente_cp:
-								self.constr_ex_festivi_poche_manovre[vigile] = self.solver.Constraint(_NUM_MIN_FESTIVI_ESENTI_CP+1, self.solver.infinity(), "constr_ex_festivi_poche_manovre({})".format(vigile))
+								self.constr_ex_festivi_poche_manovre[vigile] = self.solver.Constraint(max(_NUM_MIN_FESTIVI_ESENTI_CP, num_medio_festivi)+1, self.solver.infinity(), "constr_ex_festivi_poche_manovre({})".format(vigile))
 							else:
-								self.constr_ex_festivi_poche_manovre[vigile] = self.solver.Constraint(_NUM_MIN_FESTIVI+1, self.solver.infinity(), "constr_ex_festivi_poche_manovre({})".format(vigile))
+								self.constr_ex_festivi_poche_manovre[vigile] = self.solver.Constraint(num_medio_festivi+1, self.solver.infinity(), "constr_ex_festivi_poche_manovre({})".format(vigile))
 							for giorno in self.var_notti.keys():
 								if giorno in self.var_festivi_vigile.keys():
 									self.constr_ex_festivi_poche_manovre[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)

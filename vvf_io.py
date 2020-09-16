@@ -267,9 +267,9 @@ class VVFParser(argparse.ArgumentParser):
 		self.add_argument("-l", "--loose",
 							help="enable assigning night shifts outside weekly availability",
 							action="store_true")
-		self.add_argument("-m", "--media-notti", type=int,
-							help="average number of night shifts for regular firefighters, if set enables the 'PocheManovre' exception",
-							default="-1")
+		self.add_argument("-m", "--media-notti-festivi", type=int, action='store', nargs=2, 
+							help="average number of night and festivi shifts for regular firefighters, if set enables the 'PocheManovre' exception",
+							default=[-1, -1])
 		self.add_argument("-n", "--neo-vigili",
 							help="assign extra shifts to firefighters in their first two years of full service",
 							action="store_true")
