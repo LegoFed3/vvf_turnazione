@@ -9,6 +9,7 @@ _GRADI_VALIDI = [
 	"Caposquadra",
 	"Vigile",
 	"Aspirante",
+	"Complemento",
 	"Ispettore",
 	"Presidente",
 	]
@@ -130,12 +131,16 @@ class Vigile:
 		if (self.EsenteServizi() 
 			or self.Aspirante()
 			or "EsenteNotti" in self.eccezioni
+			or self.grado == "Complemento"
 			):
 			return True
 		return False
 
 	def EsenteSabati(self):
-		if self.EsenteServizi() or self.Aspirante():
+		if (self.EsenteServizi()
+			or self.Aspirante()
+			or self.grado == "Complemento"
+			):
 			return True
 		return False
 
