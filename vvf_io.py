@@ -69,6 +69,8 @@ class Vigile:
 	passato_capodanni = 0
 	esente_cp = False
 	aspirante_passa_a_vigile = False
+	mesi_da_vigile = 12
+	neo_vigile = False
 
 	def __init__(self, *args):
 		self.id = int(args[0][0])
@@ -83,7 +85,7 @@ class Vigile:
 		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
 			self.squadre = [0]
 		self.gruppo_festivo = int(args[0][6])
-		if self.grado == "Aspirante" and len(args[0][7]) > 0:
+		if len(args[0][7]) > 0:
 			self.data_passaggio_vigile = dt.datetime.strptime(args[0][7], '%d/%m/%Y').date()
 		self.eccezioni = set(args[0][8].split(","))
 		if '' in self.eccezioni:
@@ -221,6 +223,9 @@ def correggi_aspiranti(db, data_inizio, data_fine):
 			and db[vigile].data_passaggio_vigile < data_fine
 			):
 			db[vigile].aspirante_passa_a_vigile = True
+			db[vigile].mesi_da_vigile = round((data_fine - db[vigile].data_passaggio_vigile).days / 30.0)
+		if db[vigile].data_passaggio_vigile + dt.timedelta(365*2) > data_inizio:
+			db[vigile].neo_vigile = True
 	return db
 
 def date(string):
@@ -256,6 +261,9 @@ class VVFParser(argparse.ArgumentParser):
 							default="1")
 		self.add_argument("-l", "--loose",
 							help="enable assigning night shifts outside weekly availability",
+							action="store_true")
+		self.add_argument("-n", "--neo-vigili",
+							help="assign extra shifts to firefighters in their first two years of full service",
 							action="store_true")
 		self.add_argument("-o", "--organico-fn", type=str,
 							help="path to CSV containing the available firefigthers (Default: organico.csv)",
