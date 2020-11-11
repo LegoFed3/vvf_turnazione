@@ -4,7 +4,7 @@ Questo programma calcola la turnazione per i vigili del fuoco volontari, tenendo
 
 ## Prerequisiti
 Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.6) e si basa, per la soluzione di una formulazione ILP, su [Google OR Tools](https://developers.google.com/optimization) ed il solver GLOP da esso fornito.
-Su e.g. Ubuntu Linux (e vari derivati) si possono installare con:
+Su e.g. Ubuntu Linux (e distribuzioni analoghe) si possono installare con:
 ```
 sudo apt install python3
 python -m pip install --upgrade --user ortools
@@ -34,7 +34,7 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
   -m MEDIA_NOTTI MEDIA_FESTIVI, --media-notti-festivi MEDIA_NOTTI MEDIA_FESTIVI
                         Numero medio di notti e festivi per vigile, abilita servizi extra per l'eccezione "PocheManovre"
-  -n, --neo-vigili      Abilita l'assegnazione di una notte al mese per i primi due anni ai neo-vigili
+  -n, --neo-vigili      Abilita l'assegnazione di notti extra (10, o una al mese se <10 mesi) per i primi due anni ai neo-vigili
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
                         Default: organico.csv
@@ -46,6 +46,7 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
                         Default: nessun limite
   -v, --verbose         Abilita l'output verboso del solver
 ```
+Ad esempio: `python main.py 2021-1-15 2022-1-14 3 -o organico_2020.csv -r riporti_2020.csv -j 4 -t 300 -l -n` calcola, come sopra, i turni da venerdì 15 gennaio 2021 a venerdì 14 gennaio 2022 con la squadra 3 reperibile per la prima settimana, consumando però i file organico_2020.csv e riporti_2020.csv, limitando il solver ad utilizzare circa 5 minuti di CPU, distribuendo il calcolo della soluzione su 4 thread, permettendo l'assegnazione di notti fuori dalla settimana di reperibilità (se necessario a ridurre le differenze tra i numeri di servizi assegnati), ed assegnando notti extra per i primi due anni ai neo-vigili (dopo l'aspirantato).
 
 ## Input
 Il programma consuma in input due file (esempi dei quali sono forniti in questo repository):
@@ -58,7 +59,15 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Data Passaggio a Vigile*: per gli aspiranti, determine quanti servizi assegnare perl'anno del passaggio e quando assegnarli. Dev'essere nel formato GG/MM/AAAA.
 	* *Eccezioni*: lista separata da virgola e senza spazi (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
 		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
-		* Altre richieste: Aspettativa, EsenteCP, EsenteNotti, PocheManovre, NottiSoloSabatoFestivi, NoNottiGiornoLun, NoNottiGiornoMar, NoNottiGiornoMer, NoNottiGiornoGio, NoNottiGiornoVen, NoNottiGiornoSab, NoNottiGiornoDom, 	NoNottiMese1, NoNottiMese2, NoNottiMese3, NoNottiMese4, NoNottiMese5, NoNottiMese6, NoNottiMese7, NoNottiMese8, NoNottiMese9, NoNottiMese10, NoNottiMese11, NoNottiMese12, NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, NottiAncheFuoriSettimana, FestiviComunque, LimiteNotti1, LimiteNotti2, LimiteNotti3, LimiteNotti4, LimiteNotti5, LimiteNotti6, LimiteNotti7, LimiteNotti8, LimiteNotti9, LimiteNotti10.
+		* Altre richieste: 
+			* Aspettativa: nessun servizio durante l'anno.
+			* EsenteCP: notti extra per compensare la non-reperibilità.
+			* EsenteNotti: nessun servizio notturno.
+			* PocheManovre: servizi extra per poche manovre frequentate l'anno precedente.
+			* NottiSoloSabatoFestivi, NoNottiGiornoLun, NoNottiGiornoMar, NoNottiGiornoMer, NoNottiGiornoGio, NoNottiGiornoVen, NoNottiGiornoSab, NoNottiGiornoDom, NoNottiMese1, NoNottiMese2, NoNottiMese3, NoNottiMese4, NoNottiMese5, NoNottiMese6, NoNottiMese7, NoNottiMese8, NoNottiMese9, NoNottiMese10, NoNottiMese11, NoNottiMese12: limiti ai giorni per i quali è possibile assegnare notti al vigile.
+			* NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.
+			* NottiAncheFuoriSettimana: consente di assegnare notti anche fuori dalla settimana di reperibilità al vigile (versione individuale di -l).
+			* LimiteNotti1, LimiteNotti2, LimiteNotti3, LimiteNotti4, LimiteNotti5, LimiteNotti6, LimiteNotti7, LimiteNotti8, LimiteNotti9, LimiteNotti10: limite specifico al numero di notti assegnabili; sovrascrive il limite per carica.
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.
