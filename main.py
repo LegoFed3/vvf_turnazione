@@ -12,6 +12,6 @@ model.Solve(args.time_limit, args.verbose, args.jobs)
 
 
 model.SaveSolution()
-print("Dati salvato in turni_{}.csv e riporti_{}.csv.".format(model.anno, model.anno))
+print("Dati salvati in turni_{}.csv e riporti_{}.csv.".format(model.anno, model.anno))
 t1 = time.time()
 print("Soluzione trovata in {0:.2f} secondi.".format(t1 - t0))

@@ -48,6 +48,16 @@ _ECCEZZIONI_VALIDE = [
 	"NoServiziMese12",
 	"NottiAncheFuoriSettimana",
 	"FestiviComunque",
+	"LimiteNotti1",
+	"LimiteNotti2",
+	"LimiteNotti3",
+	"LimiteNotti4",
+	"LimiteNotti5",
+	"LimiteNotti6",
+	"LimiteNotti7",
+	"LimiteNotti8",
+	"LimiteNotti9",
+	"LimiteNotti10",
 	]
 
 class Vigile:
@@ -219,10 +229,12 @@ def read_csv_riporti(db, filename):
 		else:
 			line = line.strip("\n\r").split(";")
 			if len(line) > 0:
-				db[int(line[0])].passato_servizi_extra = int(line[1])
-				db[int(line[0])].passato_capodanni = int(line[2])
-				db[int(line[0])].passato_sabati = list(map(lambda x: int(x), line[3:8]))
-				db[int(line[0])].passato_festivi_onerosi = list(map(lambda x: int(x), line[8:12]))
+				id = int(line[0])
+				if id in db.keys():
+					db[id].passato_servizi_extra = int(line[1])
+					db[id].passato_capodanni = int(line[2])
+					db[id].passato_sabati = list(map(lambda x: int(x), line[3:8]))
+					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[8:12]))
 	fi.close()
 	return db
 
