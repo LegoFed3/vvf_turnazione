@@ -36,11 +36,11 @@
 34;N34;C34;27/04/1983;Vigile;2;16;;;Note:
 35;N35;C35;14/06/1983;Vigile;3;17;;;Note:
 36;N36;C36;30/06/1983;Vigile;4;18;;;Note:
-37;N37;C37;03/06/1984;Vigile;1;1;;NoNottiLun,NoNottiMer,NoNottiGio,NoNottiSab,NoNottiDom;Note:
+37;N37;C37;03/06/1984;Vigile;1;1;;NoNottiGiornoLun,NoNottiGiornoMer,NoNottiGiornoGio,NoNottiGiornoSab,NoNottiGiornoDom;Note:
 38;N38;C38;31/07/1984;Vigile;2;2;;Segretario;Note:
-39;N39;C39;13/08/1984;Vigile;3;3;;NoNottiMar,NoNottiMer,NoNottiGio,NoNottiVen,NoNottiSab,NoNottiDom;Note:
+39;N39;C39;13/08/1984;Vigile;3;3;;NoNottiGiornoMar,NoNottiGiornoMer,NoNottiGiornoGio,NoNottiGiornoVen,NoNottiGiornoSab,NoNottiGiornoDom;Note:
 40;N40;C40;08/03/1985;Vigile;4;4;;NottiSoloSabatoFestivi;Note:
-41;N41;C41;30/06/1985;Vigile;1;5;;NoNottiLun,NoNottiMar,NoNottiMer,NoNottiGio,NoNottiVen,NoNottiDom,NoServiziMese7,NoServiziMese8,NoServiziMese9,NoServiziMese10,NoServiziMese11,NoServiziMese12;Note:
+41;N41;C41;30/06/1985;Vigile;1;5;;NoNottiGiornoLun,NoNottiGiornoMar,NoNottiGiornoMer,NoNottiGiornoGio,NoNottiGiornoVen,NoNottiGiornoDom,NoServiziMese7,NoServiziMese8,NoServiziMese9,NoServiziMese10,NoServiziMese11,NoServiziMese12;Note:
 42;N42;C42;25/09/1986;Caposquadra;2;6;;;Note:
 43;N43;C43;12/09/1988;Vigile;3;7;;;Note:
 44;N44;C44;13/10/1989;Vigile;4;8;;;Note:
