@@ -63,6 +63,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 			* Aspettativa: nessun servizio durante l'anno.
 			* EsenteCP: notti extra per compensare la non-reperibilità.
 			* EsenteNotti: nessun servizio notturno.
+			* EsenteSabati: nessun servizio sabato diurno.
 			* PocheManovre: servizi extra per poche manovre frequentate l'anno precedente.
 			* NottiSoloSabatoFestivi, NoNottiGiornoLun, NoNottiGiornoMar, NoNottiGiornoMer, NoNottiGiornoGio, NoNottiGiornoVen, NoNottiGiornoSab, NoNottiGiornoDom, NoNottiMese1, NoNottiMese2, NoNottiMese3, NoNottiMese4, NoNottiMese5, NoNottiMese6, NoNottiMese7, NoNottiMese8, NoNottiMese9, NoNottiMese10, NoNottiMese11, NoNottiMese12: limiti ai giorni per i quali è possibile assegnare notti al vigile.
 			* NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.

@@ -644,7 +644,7 @@ class TurnazioneVVF:
 					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mul_compleanno * mul_notti * mul_notte_squadra + pen_notti_onerose)
 				if giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
-						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1.5 * mul_compleanno * mul_sabati) # Base 1.5 perchè se ne assegna due almeno cerca di assegnare una notte in meno...
+						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 2 * mul_compleanno * mul_sabati)
 				if giorno in self.var_festivi_vigile.keys() and gruppo != 0:
 					if vigile in self.var_festivi_vigile[giorno].keys():
 						self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1.2 * mul_compleanno * mul_festivi_onerosi) # Base 1.2 per forzare massima equità
