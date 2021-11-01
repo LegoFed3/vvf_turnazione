@@ -97,6 +97,8 @@ class Vigile:
 	notti = 0
 	sabati = 0
 	festivi = 0
+	coeff_notti = 1
+	coeff_sabati = 1.1  # per favorire l'assegnazione dello stesso numero di sabati
 	capodanno = 0
 	festivi_onerosi = 0
 	passato_festivi_onerosi = [0]*5
@@ -131,8 +133,8 @@ class Vigile:
 			if e not in _ECCEZZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
-			elif e == "EsenteCP":
-				self.esente_cp = True
+			if e in ["Segretario", "Cassiere", "Magazziniere", "Vicemagazziniere", "Resp. Allievi"]:
+				self.coeff_notti = max(self.coeff_notti, 9.0/5)
 		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
 			self.gruppo_festivo = 0
@@ -141,6 +143,21 @@ class Vigile:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadre))
 			self.squadre = [0]
 			print("\tIgnoro la squadra.")
+		# Coefficienti notti
+		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone"]:
+			self.coeff_sabati = 1.5
+		if self.grado == "Comandante":
+			self.coeff_notti = 9.0/3
+		elif self.grado == "Vicecomandante":
+			self.coeff_notti = 9.0/4
+		elif self.grado in ["Capoplotone", "Caposquadra"]:
+			self.coeff_notti = 9.0/7
+		for e in self.eccezioni:
+			if e in ["Segretario", "Cassiere", "Magazziniere", "Vicemagazziniere", "Resp. Allievi"]:
+				self.coeff_notti = max(self.coeff_notti, 9.0/5)
+		for e in self.eccezioni:
+			if "LimiteNotti" in e:
+				self.coeff_notti = 1 # Ignora pesi, assegnale fino a questo limite
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -169,6 +186,11 @@ class Vigile:
 			or self.grado == "Complemento"
 			or "Aspettativa" in self.eccezioni
 			):
+			return True
+		return False
+
+	def esenteCP(self):
+		if "EsenteCP" in self.eccezioni:
 			return True
 		return False
 
