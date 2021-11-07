@@ -262,9 +262,13 @@ class TurnazioneVVF:
 		print("* Fase 2: aggiungo vincoli...")
 
 		#Controlla di avere abbastanza vigili per max 1 sabato
+		sabati_gradi_alti = True
 		num_sabati = len(self.var_sabati.keys())
 		num_vigili_per_sabati = len(self.var_sabati[1]) #Giorno 1 è sabato perchè 0 è venerdì
 		sabati_minimi = 0
+		if num_vigili_per_sabati -5 >= num_sabati:
+			sabati_gradi_alti = False
+			print("Info: ho abbastanza vigili per non dare sabati ai gradi alti.")
 		if num_vigili_per_sabati < num_sabati:
 			sabati_minimi = math.floor(num_sabati/float(num_vigili_per_sabati))
 			print("ATTENZIONE: {} vigili insufficienti per coprire {} sabati con un solo servizio a testa.".format(num_vigili_per_sabati, num_sabati))
@@ -272,15 +276,20 @@ class TurnazioneVVF:
 
 		for vigile in self.vigili:
 			gruppo = self.DB[vigile].gruppo_festivo
-			
+
 			if not self.DB[vigile].EsenteSabati() and not self.DB[vigile].Aspirante():
-				#CONSTR: max 1 sabato, se possibile
-				if sabati_minimi == 0:
-					self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_un_sabato_vigile({})".format(vigile))
+
+				#Saltare sabati per Comandante, Vice e Capiplotone se vigili sufficienti
+				if self.DB[vigile].grado in ["Comandante", "Vicecomandante", "Capoplotone"] and not sabati_gradi_alti:
+					self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_un_sabato_vigile({})".format(vigile))
 				else:
-					self.constr_sabati_vigile[vigile] = self.solver.Constraint(sabati_minimi, sabati_minimi+1, "constr_un_sabato_vigile({})".format(vigile))
-				for sabato in self.var_sabati.keys():
-					self.constr_sabati_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
+					#CONSTR: max 1 sabato, se possibile
+					if sabati_minimi == 0:
+						self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_un_sabato_vigile({})".format(vigile))
+					else:
+						self.constr_sabati_vigile[vigile] = self.solver.Constraint(sabati_minimi, sabati_minimi+1, "constr_un_sabato_vigile({})".format(vigile))
+					for sabato in self.var_sabati.keys():
+						self.constr_sabati_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 				#CONSTR: max 1 tra venerdì notte, sabato e sabato notte
 				if "NottiSoloSabato" not in self.DB[vigile].eccezioni and "NottiSoloSabatoFestivi" not in self.DB[vigile].eccezioni:
