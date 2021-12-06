@@ -4,9 +4,10 @@ import datetime as dt
 import math
 import vvf_io
 
-_NUM_MIN_FESTIVI = 3 #
-_NUM_MAX_FESTIVI = 4 #5
-_NUM_MIN_FESTIVI_ESENTI_CP = 5
+_NUM_MIN_FESTIVI = 4 #0
+_NUM_MAX_FESTIVI = 6 #5
+# _NUM_MIN_FESTIVI_ESENTI_CP = _NUM_MAX_FESTIVI+1
+_SPAZIATORE_FESTIVI = 5 #5
 
 class TurnazioneVVF:
 	#Collections
@@ -134,13 +135,13 @@ class TurnazioneVVF:
 			exit(-1)
 		loose = args.loose
 		servizi_compleanno = args.servizi_compleanno
-		self.servizi_neo_vigili = args.neo_vigili
 		num_medio_notti = args.media_notti_festivi[0]
 		num_medio_festivi = args.media_notti_festivi[1]
 		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(args.organico_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
 		self.DB = vvf_io.correggi_aspiranti(self.DB, self.data_inizio, self.data_fine)
+		self.DB = vvf_io.calcola_coefficienti(self.DB)
 		self.vigili = list(self.DB.keys())
 		self.vigili_squadra = {}
 		self.vigili_gruppi_festivo = {}
@@ -262,16 +263,13 @@ class TurnazioneVVF:
 		print("* Fase 2: aggiungo vincoli...")
 
 		#Controlla di avere abbastanza vigili per max 1 sabato
-		sabati_gradi_alti = True
 		num_sabati = len(self.var_sabati.keys())
 		num_vigili_per_sabati = len(self.var_sabati[1]) #Giorno 1 è sabato perchè 0 è venerdì
+		sabati_extra_tot = sum([v.extraSabati() for v in self.DB.values()])
 		sabati_minimi = 0
-		if num_vigili_per_sabati -5 >= num_sabati:
-			sabati_gradi_alti = False
-			print("Info: ho abbastanza vigili per non dare sabati ai gradi alti.")
-		if num_vigili_per_sabati < num_sabati:
+		if num_vigili_per_sabati + sabati_extra_tot < num_sabati:
 			sabati_minimi = math.floor(num_sabati/float(num_vigili_per_sabati))
-			print("ATTENZIONE: {} vigili insufficienti per coprire {} sabati con un solo servizio a testa.".format(num_vigili_per_sabati, num_sabati))
+			print("ATTENZIONE: {} vigili (+ {} sabati extra) insufficienti per coprire {} sabati con un solo servizio a testa.".format(num_vigili_per_sabati, sabati_extra_tot, num_sabati))
 			print("\tNe assegnerò {}-{}.".format(sabati_minimi, sabati_minimi+1))
 
 		for vigile in self.vigili:
@@ -280,21 +278,15 @@ class TurnazioneVVF:
 			if not self.DB[vigile].EsenteSabati() and not self.DB[vigile].Aspirante():
 
 				#Sabati extra
-				sabati_extra = 0
-				if self.DB[vigile].extraSabati():
-					sabati_extra = [int(e[len("ExtraSabati"):]) for e in self.DB[vigile].eccezioni if "ExtraSabati" in e]
+				sabati_extra = self.DB[vigile].extraSabati()
 
-				#Saltare sabati per Comandante, Vice e Capiplotone se vigili sufficienti
-				if self.DB[vigile].grado in ["Comandante", "Vicecomandante", "Capoplotone"] and not sabati_gradi_alti:
-					self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_un_sabato_vigile({})".format(vigile))
+				#CONSTR: max 1 sabato, se possibile
+				if (sabati_minimi + sabati_extra) == 0:
+					self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_un_sabato_vigile({})".format(vigile))
 				else:
-					#CONSTR: max 1 sabato, se possibile
-					if (sabati_minimi + sabati_extra) == 0:
-						self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_un_sabato_vigile({})".format(vigile))
-					else:
-						self.constr_sabati_vigile[vigile] = self.solver.Constraint(sabati_minimi+sabati_extra, sabati_minimi+sabati_extra+1, "constr_un_sabato_vigile({})".format(vigile))
-					for sabato in self.var_sabati.keys():
-						self.constr_sabati_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
+					self.constr_sabati_vigile[vigile] = self.solver.Constraint(sabati_minimi+sabati_extra, sabati_minimi+sabati_extra+1, "constr_un_sabato_vigile({})".format(vigile))
+				for sabato in self.var_sabati.keys():
+					self.constr_sabati_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 				#CONSTR: max 1 tra venerdì notte, sabato e sabato notte
 				if "NottiSoloSabato" not in self.DB[vigile].eccezioni and "NottiSoloSabatoFestivi" not in self.DB[vigile].eccezioni:
@@ -372,7 +364,7 @@ class TurnazioneVVF:
 				and gruppo != 0):
 				self.constr_festivi_spaziati[gruppo] = {}
 				lista_FESTIVI = list(self.var_festivi_gruppo.keys())
-				guardia = 5
+				guardia = _SPAZIATORE_FESTIVI
 				for i, festivo in enumerate(lista_FESTIVI):
 					self.constr_festivi_spaziati[gruppo][i] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_festivi_spaziati_gruppo({})_festivo({})".format(gruppo, festivo))
 					for j in range(max(0, i-guardia), min(i+guardia, len(lista_FESTIVI))):
@@ -381,10 +373,7 @@ class TurnazioneVVF:
 			#CONSTR: max 5 festivi l'anno
 			#NOTA: aggiunto un minimo di 3 per "forzare" il calcolo di una distribuzione più equa più rapidamente
 			if not self.DB[vigile].EsenteFestivi():
-				if "PocheManovre" in self.DB[vigile].eccezioni:
-					self.constr_festivi_vigile[vigile] = self.solver.Constraint(_NUM_MIN_FESTIVI, _NUM_MAX_FESTIVI+1, "constr_festivi_vigile({})".format(vigile))
-				else:
-					self.constr_festivi_vigile[vigile] = self.solver.Constraint(_NUM_MIN_FESTIVI, _NUM_MAX_FESTIVI, "constr_festivi_vigile({})".format(vigile))
+				self.constr_festivi_vigile[vigile] = self.solver.Constraint(_NUM_MIN_FESTIVI, _NUM_MAX_FESTIVI, "constr_festivi_vigile({})".format(vigile))
 				for festivo in self.var_festivi_vigile.keys():
 					if vigile in self.var_festivi_vigile[festivo].keys():
 						self.constr_festivi_vigile[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
@@ -392,61 +381,61 @@ class TurnazioneVVF:
 			limite_notti = [int(e[len("LimiteNotti"):]) for e in self.DB[vigile].eccezioni if "LimiteNotti" in e]
 
 			#CONSTR: max 3 notti per comandante
-			if (
-				self.DB[vigile].grado in ["Comandante"]
-				and len(limite_notti) == 0
-				and not self.DB[vigile].EsenteNotti()
-				):
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_notti_graduati_comandante({})".format(vigile))
-				for giorno in range(len(self.var_notti.keys())):
-					self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+			# if (
+				# self.DB[vigile].grado in ["Comandante"]
+				# and len(limite_notti) == 0
+				# and not self.DB[vigile].EsenteNotti()
+				# ):
+				# self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_notti_graduati_comandante({})".format(vigile))
+				# for giorno in range(len(self.var_notti.keys())):
+					# self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 			#CONSTR: max 4 notti per vicecomandante
-			if (
-				self.DB[vigile].grado in ["Vicecomandante"]
-				and len(limite_notti) == 0
-				and not self.DB[vigile].EsenteNotti()
-				):
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_notti_graduati_vicecomandante({})".format(vigile))
-				for giorno in range(len(self.var_notti.keys())):
-					self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+			# if (
+				# self.DB[vigile].grado in ["Vicecomandante"]
+				# and len(limite_notti) == 0
+				# and not self.DB[vigile].EsenteNotti()
+				# ):
+				# self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_notti_graduati_vicecomandante({})".format(vigile))
+				# for giorno in range(len(self.var_notti.keys())):
+					# self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 			#CONSTR: max 3 festivi per comandante e vice
-			if (
-				self.DB[vigile].grado in ["Comandante", "Vicecomandante"]
-				and not self.DB[vigile].EsenteFestivi()
-				):
-				self.constr_festivi_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_festivi_graduati_comandanti({})".format(vigile))
-				for festivo in self.var_festivi_vigile.keys():
-					self.constr_festivi_graduati[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
+			# if (
+				# self.DB[vigile].grado in ["Comandante", "Vicecomandante"]
+				# and not self.DB[vigile].EsenteFestivi()
+				# ):
+				# self.constr_festivi_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 3, "constr_festivi_graduati_comandanti({})".format(vigile))
+				# for festivo in self.var_festivi_vigile.keys():
+					# self.constr_festivi_graduati[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
 
 			#CONSTR: max 7 notti per capiplotone e capisquadra
-			if (
-				self.DB[vigile].grado in ["Capoplotone", "Caposquadra"]
-				and len(limite_notti) == 0
-				):
-				self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 7, "constr_notti_graduati_capi({})".format(vigile))
-				for giorno in range(len(self.var_notti.keys())):
-					if vigile in self.var_notti[giorno].keys():
-						self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+			# if (
+				# self.DB[vigile].grado in ["Capoplotone", "Caposquadra"]
+				# and len(limite_notti) == 0
+				# ):
+				# self.constr_notti_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 7, "constr_notti_graduati_capi({})".format(vigile))
+				# for giorno in range(len(self.var_notti.keys())):
+					# if vigile in self.var_notti[giorno].keys():
+						# self.constr_notti_graduati[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 			#CONSTR: max 4 festivi per capiplotone e capisquadra
-			if (
-				self.DB[vigile].grado in ["Capoplotone", "Caposquadra"]
-				and not self.DB[vigile].EsenteFestivi()
-				):
-				self.constr_festivi_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_festivi_graduati_capi({})".format(vigile))
-				for festivo in self.var_festivi_vigile.keys():
-					self.constr_festivi_graduati[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
+			# if (
+				# self.DB[vigile].grado in ["Capoplotone", "Caposquadra"]
+				# and not self.DB[vigile].EsenteFestivi()
+				# ):
+				# self.constr_festivi_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_festivi_graduati_capi({})".format(vigile))
+				# for festivo in self.var_festivi_vigile.keys():
+					# self.constr_festivi_graduati[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
 
 			#CONSTR: max 1 sabato per graduati
-			if (
-				self.DB[vigile].Graduato()
-				and not self.DB[vigile].EsenteSabati()
-				):
-				self.constr_sabati_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_sabati_graduati({})".format(vigile))
-				for sabato in self.var_sabati.keys():
-					self.constr_sabati_graduati[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
+			# if (
+				# self.DB[vigile].Graduato()
+				# and not self.DB[vigile].EsenteSabati()
+				# ):
+				# self.constr_sabati_graduati[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_sabati_graduati({})".format(vigile))
+				# for sabato in self.var_sabati.keys():
+					# self.constr_sabati_graduati[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 			#CONSTR: aspiranti che diventano vigili, no servizi prima del passaggio
 			if self.DB[vigile].aspirante_passa_a_vigile:
@@ -461,14 +450,14 @@ class TurnazioneVVF:
 					#No festivi, li fa comunque
 
 			#CONSTR: neo vigili, fino a 10 notti minime
-			if (
-				self.DB[vigile].neo_vigile and self.servizi_neo_vigili
-				and "Aspettativa" not in self.DB[vigile].eccezioni
-				):
-				self.constr_notti_neo_vigili[vigile] = self.solver.Constraint(min(self.DB[vigile].mesi_da_vigile, 10), self.solver.infinity(), "constr_notti_neo_vigili({})".format(vigile))
-				for giorno in self.var_notti.keys():
-					if vigile in self.var_notti[giorno].keys():
-						self.constr_notti_neo_vigili[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+			# if (
+				# self.DB[vigile].neo_vigile
+				# and "Aspettativa" not in self.DB[vigile].eccezioni
+				# ):
+				# self.constr_notti_neo_vigili[vigile] = self.solver.Constraint(min(self.DB[vigile].mesi_da_vigile, 10), self.solver.infinity(), "constr_notti_neo_vigili({})".format(vigile))
+				# for giorno in self.var_notti.keys():
+					# if vigile in self.var_notti[giorno].keys():
+						# self.constr_notti_neo_vigili[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 			#ECCEZIONI alle regole usuali
 			if len(self.DB[vigile].eccezioni) > 0:
@@ -481,36 +470,34 @@ class TurnazioneVVF:
 							self.constr_ex_limite_notti[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 				#CONSTR_EX: max 5 notti per direttivo, altre cariche:
-				carica_direttivo_altro = [c for c in self.DB[vigile].eccezioni if c in ["Segretario", "Cassiere", "Magazziniere", "Resp. Allievi", "Vicemagazziniere"]]
-				if len(carica_direttivo_altro) > 0 and len(limite_notti) == 0:
-					self.constr_ex_notti_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 5, "constr_ex_notti_direttivo({})".format(vigile))
-					for giorno in range(len(self.var_notti.keys())):
-						if vigile in self.var_notti[giorno].keys():
-							self.constr_ex_notti_direttivo[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+				# carica_direttivo_altro = [c for c in self.DB[vigile].eccezioni if c in ["Segretario", "Cassiere", "Magazziniere", "Resp. Allievi", "Vicemagazziniere"]]
+				# if len(carica_direttivo_altro) > 0 and len(limite_notti) == 0:
+					# self.constr_ex_notti_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 5, "constr_ex_notti_direttivo({})".format(vigile))
+					# for giorno in range(len(self.var_notti.keys())):
+						# if vigile in self.var_notti[giorno].keys():
+							# self.constr_ex_notti_direttivo[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 				#CONSTR_EX: max 1 sabato per direttivo, altre cariche:
-				carica_direttivo_altro = [c for c in self.DB[vigile].eccezioni if c in ["Segretario", "Cassiere", "Magazziniere", "Resp. Allievi", "Vicemagazziniere"]]
-				if len(carica_direttivo_altro) > 0:
-					self.constr_ex_sabati_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_ex_sabati_direttivo({})".format(vigile))
-					for sabato in self.var_sabati.keys():
-						if vigile in self.var_sabati[sabato].keys():
-							self.constr_ex_sabati_direttivo[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
+				# carica_direttivo_altro = [c for c in self.DB[vigile].eccezioni if c in ["Segretario", "Cassiere", "Magazziniere", "Resp. Allievi", "Vicemagazziniere"]]
+				# if len(carica_direttivo_altro) > 0:
+					# self.constr_ex_sabati_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_ex_sabati_direttivo({})".format(vigile))
+					# for sabato in self.var_sabati.keys():
+						# if vigile in self.var_sabati[sabato].keys():
+							# self.constr_ex_sabati_direttivo[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 				#CONSTR_EX: max 4 festivi per altre cariche direttivo
-				carica_direttivo = [c for c in self.DB[vigile].eccezioni if c in ["Segretario", "Cassiere", "Magazziniere"]]
-				if len(carica_direttivo) > 0 and not self.DB[vigile].EsenteFestivi():
-					self.constr_ex_festivi_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_ex_festivi_direttivo({})".format(vigile))
-					for festivo in self.var_festivi_vigile.keys():
-						self.constr_ex_festivi_direttivo[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
+				# carica_direttivo = [c for c in self.DB[vigile].eccezioni if c in ["Segretario", "Cassiere", "Magazziniere"]]
+				# if len(carica_direttivo) > 0 and not self.DB[vigile].EsenteFestivi():
+					# self.constr_ex_festivi_direttivo[vigile] = self.solver.Constraint(-self.solver.infinity(), 4, "constr_ex_festivi_direttivo({})".format(vigile))
+					# for festivo in self.var_festivi_vigile.keys():
+						# self.constr_ex_festivi_direttivo[vigile].SetCoefficient(self.var_festivi_vigile[festivo][vigile], 1)
 
 				#CONSTR_EX: almeno 15 notti per esenti CP
-				# >>> 12 @VICECOMANDANTE
-				if self.DB[vigile].esenteCP() and not self.DB[vigile].EsenteNotti():
+				# if self.DB[vigile].esenteCP() and not self.DB[vigile].EsenteNotti():
 					# self.constr_ex_notti_minime_esenti_CP[vigile] = self.solver.Constraint(15, self.solver.infinity(), "constr_ex_notti_minime_esenti_CP_vigile({})".format(vigile))
-					self.constr_ex_notti_minime_esenti_CP[vigile] = self.solver.Constraint(12, self.solver.infinity(), "constr_ex_notti_minime_esenti_CP_vigile({})".format(vigile))
-					for giorno in range(len(self.var_notti.keys())):
-						if vigile in self.var_notti[giorno].keys():
-							self.constr_ex_notti_minime_esenti_CP[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+					# for giorno in range(len(self.var_notti.keys())):
+						# if vigile in self.var_notti[giorno].keys():
+							# self.constr_ex_notti_minime_esenti_CP[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 				#CONSTR_EX: almeno 1 sabato per esenti CP
 				if self.DB[vigile].esenteCP() and not self.DB[vigile].EsenteSabati():
@@ -520,7 +507,6 @@ class TurnazioneVVF:
 							self.constr_ex_sabati_minimi_esenti_CP[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
 				#CONSTR_EX: almeno 5 festivi per esenti CP
-				# >>>SOSPESO @VICECOMANDANTE
 				# if self.DB[vigile].esenteCP() and not self.DB[vigile].EsenteFestivi():
 					# self.constr_ex_festivi_minimi_esenti_CP[vigile] = self.solver.Constraint(_NUM_MIN_FESTIVI_ESENTI_CP, self.solver.infinity(), "constr_ex_festivi_minimi_esenti_CP({})".format(vigile))
 					# for festivo in self.var_festivi_vigile.keys():
@@ -579,31 +565,28 @@ class TurnazioneVVF:
 							if vigile in self.var_festivi_vigile[festivo].keys():
 								self.constr_ex_no_servizi_aspettativa[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
 
-				if "PocheManovre" in self.DB[vigile].eccezioni:
-					if num_medio_notti > 0:
-						#CONSTR_EX: +4 notti per vigili con poche manovre
-						if not self.DB[vigile].EsenteNotti():
-							self.constr_ex_extra_notti[vigile] = self.solver.Constraint(num_medio_notti+4, self.solver.infinity(), "constr_ex_extra_notti({})".format(vigile))
-							for giorno in self.var_notti.keys():
-								if vigile in self.var_notti[giorno]:
-									self.constr_ex_extra_notti[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+				# if "PocheManovre" in self.DB[vigile].eccezioni:
+					# if num_medio_notti > 0:
+						##CONSTR_EX: +4 notti per vigili con poche manovre
+						# if not self.DB[vigile].EsenteNotti():
+							# self.constr_ex_extra_notti[vigile] = self.solver.Constraint(num_medio_notti+4, self.solver.infinity(), "constr_ex_extra_notti({})".format(vigile))
+							# for giorno in self.var_notti.keys():
+								# if vigile in self.var_notti[giorno]:
+									# self.constr_ex_extra_notti[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
-						#CONSTR_EX: +1 festivo per vigili con poche manovre
-						if not self.DB[vigile].EsenteFestivi():
-							if self.DB[vigile].esenteCP():
-								self.constr_ex_extra_festivi[vigile] = self.solver.Constraint(max(_NUM_MIN_FESTIVI_ESENTI_CP, num_medio_festivi)+1, self.solver.infinity(), "constr_ex_extra_festivi({})".format(vigile))
-							else:
-								self.constr_ex_extra_festivi[vigile] = self.solver.Constraint(num_medio_festivi+1, self.solver.infinity(), "constr_ex_extra_festivi({})".format(vigile))
-							for giorno in self.var_notti.keys():
-								if giorno in self.var_festivi_vigile.keys():
-									self.constr_ex_extra_festivi[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
-					else:
-						print("ATTENZIONE: il vigile {} ha 'PocheManovre' ma non conosco ancora il numero medio di servizi!".format(vigile))
-						print("\tIgnoro la richiesta di assegnare servizi extra.")
-						self.DB[vigile].eccezioni.remove("PocheManovre")
+						##CONSTR_EX: +1 festivo per vigili con poche manovre
+						# if not self.DB[vigile].EsenteFestivi():
+							# self.constr_ex_extra_festivi[vigile] = self.solver.Constraint(num_medio_festivi+1, self.solver.infinity(), "constr_ex_extra_festivi({})".format(vigile))
+							# for giorno in self.var_notti.keys():
+								# if giorno in self.var_festivi_vigile.keys():
+									# self.constr_ex_extra_festivi[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
+					# else:
+						# print("ATTENZIONE: il vigile {} ha 'PocheManovre' ma non conosco ancora il numero medio di servizi!".format(vigile))
+						# print("\tIgnoro la richiesta di assegnare servizi extra.")
+						# self.DB[vigile].eccezioni.remove("PocheManovre")
 
 				if self.DB[vigile].extraNotti():
-					notti_extra = [int(e[len("ExtraNotti"):]) for e in self.DB[vigile].eccezioni if "ExtraNotti" in e]
+					notti_extra = [int(e[len("ExtraNotti"):]) for e in self.DB[vigile].eccezioni if "ExtraNotti" in e][0]
 					if num_medio_notti > 0:
 						#CONSTR_EX: +X notti per vigili con extraNotti
 						if not self.DB[vigile].EsenteNotti():
@@ -614,9 +597,7 @@ class TurnazioneVVF:
 					else:
 						print("ATTENZIONE: il vigile {} ha 'ExtraNotti' ma non conosco ancora il numero medio di servizi!".format(vigile))
 						print("\tIgnoro la richiesta di assegnare notti extra.")
-						for e in self.DB[vigile].eccezioni:
-							if "ExtraNotti" in e:
-								self.DB[vigile].eccezioni.remove(e)
+						self.DB[vigile].eccezioni.remove("ExtraNotti"+str(notti_extra))
 
 			#CONSTR: no servizi il giorno di compleanno
 			if not servizi_compleanno:
@@ -653,9 +634,9 @@ class TurnazioneVVF:
 			self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
 			mul_notti = 1
 			mul_sabati = 1 + sum(self.DB[vigile].passato_sabati) #Sabati più probabili se fatti pochi negli anni recenti
-			if self.DB[vigile].aspirante_passa_a_vigile and not self.servizi_neo_vigili:
-				mul_notti *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
-				mul_sabati *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
+			# if self.DB[vigile].aspirante_passa_a_vigile and not self.servizi_neo_vigili:
+				# mul_notti *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
+				# mul_sabati *= float(num_giorni)/(num_giorni - self._getOffsetFromDate(self.DB[vigile].data_passaggio_vigile))
 			compleanno = self.DB[vigile].OffsetCompleanno(self.data_inizio)
 			for giorno in range(len(self.var_notti.keys())):
 				mul_notte_squadra = 1
@@ -825,7 +806,7 @@ class TurnazioneVVF:
 					and not self.DB[vigile].esenteCP()
 					and not self.DB[vigile].AltreCariche()
 					and "Aspettativa" not in self.DB[vigile].eccezioni
-					and not (self.DB[vigile].neo_vigile and self.servizi_neo_vigili)
+					and not self.DB[vigile].neo_vigile
 					):
 					servizi_extra = round(self.DB[vigile].NumeroServizi() - media_servizi)
 				line += "{};".format(servizi_extra)

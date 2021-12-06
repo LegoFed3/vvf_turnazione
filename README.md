@@ -34,7 +34,6 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
   -m MEDIA_NOTTI MEDIA_FESTIVI, --media-notti-festivi MEDIA_NOTTI MEDIA_FESTIVI
                         Numero medio di notti e festivi per vigile, abilita servizi extra per l'eccezione "PocheManovre"
-  -n, --neo-vigili      Abilita l'assegnazione di notti extra (10, o una al mese se <10 mesi) per i primi due anni ai neo-vigili
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
                         Default: organico.csv
@@ -64,11 +63,12 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 			* EsenteCP: notti extra per compensare la non-reperibilità.
 			* EsenteNotti: nessun servizio notturno.
 			* EsenteSabati: nessun servizio sabato diurno.
-			* PocheManovre: servizi extra per poche manovre frequentate l'anno precedente.
 			* NottiSoloSabatoFestivi, NoNottiGiornoLun, NoNottiGiornoMar, NoNottiGiornoMer, NoNottiGiornoGio, NoNottiGiornoVen, NoNottiGiornoSab, NoNottiGiornoDom, NoNottiMese1, NoNottiMese2, NoNottiMese3, NoNottiMese4, NoNottiMese5, NoNottiMese6, NoNottiMese7, NoNottiMese8, NoNottiMese9, NoNottiMese10, NoNottiMese11, NoNottiMese12: limiti ai giorni per i quali è possibile assegnare notti al vigile.
 			* NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.
 			* NottiAncheFuoriSettimana: consente di assegnare notti anche fuori dalla settimana di reperibilità al vigile (versione individuale di -l).
 			* LimiteNotti1, LimiteNotti2, LimiteNotti3, LimiteNotti4, LimiteNotti5, LimiteNotti6, LimiteNotti7, LimiteNotti8, LimiteNotti9, LimiteNotti10: limite specifico al numero di notti assegnabili; sovrascrive il limite per carica.
+			* "ExtraNotti1", "ExtraNotti2", "ExtraNotti3", "ExtraNotti4", "ExtraNotti5", "ExtraNotti6", "ExtraNotti7", "ExtraNotti8": aggiunge esattamente il numero di notti indicato, richiede -m
+			*  "ExtraSabati1", "ExtraSabati2": aggiunge esattamente il numero di sabati indicato
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.

@@ -26,7 +26,6 @@ _ECCEZZIONI_VALIDE = [
 	"EsenteCP",
 	"EsenteNotti",
 	"EsenteSabati",
-	"PocheManovre",
 	"NottiSoloSabatoFestivi",
 	"NoNottiGiornoLun",
 	"NoNottiGiornoMar",
@@ -108,8 +107,8 @@ class Vigile:
 	notti = 0
 	sabati = 0
 	festivi = 0
-	coeff_notti = 1
-	coeff_sabati = 1.1  # per favorire l'assegnazione dello stesso numero di sabati
+	notti_base = 9.0
+	sabati_base = 1.0
 	capodanno = 0
 	festivi_onerosi = 0
 	passato_festivi_onerosi = [0]*10
@@ -139,13 +138,12 @@ class Vigile:
 		self.eccezioni = set(args[0][8].split(","))
 		if '' in self.eccezioni:
 			self.eccezioni.remove('')
+
 		# Verifiche
 		for e in self.eccezioni:
 			if e not in _ECCEZZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
-			if e in ["Segretario", "Cassiere", "Magazziniere", "Vicemagazziniere", "Resp. Allievi"]:
-				self.coeff_notti = max(self.coeff_notti, 9.0/5)
 		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
 			self.gruppo_festivo = 0
@@ -154,21 +152,12 @@ class Vigile:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadre))
 			self.squadre = [0]
 			print("\tIgnoro la squadra.")
-		# Coefficienti notti
-		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone"]:
-			self.coeff_sabati = 1.5
-		if self.grado == "Comandante":
-			self.coeff_notti = 9.0/3
-		elif self.grado == "Vicecomandante":
-			self.coeff_notti = 9.0/4
-		elif self.grado in ["Capoplotone", "Caposquadra"]:
-			self.coeff_notti = 9.0/7
-		for e in self.eccezioni:
-			if e in ["Segretario", "Cassiere", "Magazziniere", "Vicemagazziniere", "Resp. Allievi"]:
-				self.coeff_notti = max(self.coeff_notti, 9.0/5)
-		for e in self.eccezioni:
-			if "LimiteNotti" in e:
-				self.coeff_notti = 1 # Ignora pesi, assegnale fino a questo limite
+
+		# Coefficienti notti e sabati
+		self.coeff_notti = self.notti_base / 9.0
+		if "LimiteNotti" in self.eccezioni:
+			self.coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
+		self.coeff_sabati = self.sabati_base / 1.0 + 0.1 # Per favorire assegnazione stesso numero
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -203,8 +192,8 @@ class Vigile:
 	def extraSabati(self):
 		for e in self.eccezioni:
 			if "ExtraSabati" in e:
-				return True
-		return False
+				return int(e[len("ExtraSabati"):])
+		return 0
 
 	def extraNotti(self):
 		for e in self.eccezioni:
@@ -321,6 +310,37 @@ def correggi_aspiranti(db, data_inizio, data_fine):
 			db[vigile].neo_vigile = True
 	return db
 
+def calcola_coefficienti(db):
+	for vigile in db.keys():
+		if db[vigile].grado == "Comandante":
+			db[vigile].notti_base = 3.0
+			db[vigile].sabati_base = 0.5
+		elif db[vigile].grado == "Vicecomandante":
+			db[vigile].notti_base = 4.0
+			db[vigile].sabati_base = 0.5
+		elif db[vigile].grado in ["Capoplotone", "Caposquadra"]:
+			db[vigile].notti_base = 7.0
+		if (
+			"Segretario" in db[vigile].eccezioni
+			or "Cassiere" in db[vigile].eccezioni
+			or "Magazziniere" in db[vigile].eccezioni
+			or "Vicemagazziniere" in db[vigile].eccezioni
+			or "Resp. Allievi" in db[vigile].eccezioni
+			):
+			db[vigile].notti_base = min(db[vigile].notti_base, 5.0)
+		if "DaTrasferimento" in db[vigile].eccezioni:
+			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
+		if "EsenteCP" in db[vigile].eccezioni:
+			db[vigile].notti_base = max(db[vigile].notti_base, 15.0)
+		if db[vigile].neo_vigile:
+			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
+
+		db[vigile].coeff_notti = db[vigile].notti_base / 9.0
+		if "LimiteNotti" in db[vigile].eccezioni:
+			db[vigile].coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
+		db[vigile].coeff_sabati = db[vigile].sabati_base / 1.0 + 0.1 # Per favorire assegnazione stesso numero
+	return db
+
 def date(string):
 	try:
 		date = list(map(int, string.split("-")))
@@ -352,9 +372,6 @@ class VVFParser(argparse.ArgumentParser):
 		self.add_argument("-m", "--media-notti-festivi", type=int, action='store', nargs=2, 
 							help="average number of night and festivi shifts for regular firefighters, if set enables the 'PocheManovre' exception",
 							default=[-1, -1])
-		self.add_argument("-n", "--neo-vigili",
-							help="assign extra shifts to firefighters in their first two years of full service",
-							action="store_true")
 		self.add_argument("-o", "--organico-fn", type=str,
 							help="path to CSV containing the available firefigthers (Default: organico.csv)",
 							default="./organico.csv")
