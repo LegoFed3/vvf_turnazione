@@ -111,8 +111,8 @@ class Vigile:
 	coeff_sabati = 1.1  # per favorire l'assegnazione dello stesso numero di sabati
 	capodanno = 0
 	festivi_onerosi = 0
-	passato_festivi_onerosi = [0]*5
-	passato_sabati = [0]*5
+	passato_festivi_onerosi = [0]*10
+	passato_sabati = [0]*10
 	passato_servizi_extra = 0
 	passato_capodanni = 0
 	esente_cp = False
@@ -301,8 +301,8 @@ def read_csv_riporti(db, filename):
 				if id in db.keys():
 					db[id].passato_servizi_extra = int(line[1])
 					db[id].passato_capodanni = int(line[2])
-					db[id].passato_sabati = list(map(lambda x: int(x), line[3:8]))
-					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[8:12]))
+					db[id].passato_sabati = list(map(lambda x: int(x), line[3:13]))
+					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:17]))
 	fi.close()
 	return db
 

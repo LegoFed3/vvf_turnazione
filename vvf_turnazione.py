@@ -816,7 +816,7 @@ class TurnazioneVVF:
 
 			# Riporta il numero di servizi extra ed i servizi speciali
 			out = open("./riporti_{}.csv".format(self.anno), "w")
-			out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;Festivi Onerosi\n")
+			out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;;;;;;Festivi Onerosi\n")
 			for vigile in self.vigili:
 				line = "{};".format(vigile)
 				servizi_extra = 0
@@ -831,10 +831,10 @@ class TurnazioneVVF:
 				line += "{};".format(servizi_extra)
 				line += "{};".format(self.DB[vigile].passato_capodanni + self.DB[vigile].capodanno)
 				line += "{};".format(self.DB[vigile].sabati)
-				for sabati in self.DB[vigile].passato_sabati[0:4]:
+				for sabati in self.DB[vigile].passato_sabati[0:9]:
 					line += "{};".format(sabati)
 				line += "{};".format(self.DB[vigile].festivi_onerosi)
-				for festivi in self.DB[vigile].passato_festivi_onerosi[0:4]:
+				for festivi in self.DB[vigile].passato_festivi_onerosi[0:9]:
 					line += "{};".format(festivi)
 				out.write(line+"\n")
 			out.close()
