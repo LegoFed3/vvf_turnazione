@@ -63,8 +63,8 @@ class TurnazioneVVF:
 	constr_ex_no_servizi_mese = {}
 	constr_ex_no_servizi_aspettativa = {}
 
-	constr_ex_notti_poche_manovre = {}
-	constr_ex_festivi_poche_manovre = {}
+	constr_ex_extra_notti = {}
+	constr_ex_extra_festivi = {}
 
 	DB = {}
 	vigili = []
@@ -583,24 +583,40 @@ class TurnazioneVVF:
 					if num_medio_notti > 0:
 						#CONSTR_EX: +4 notti per vigili con poche manovre
 						if not self.DB[vigile].EsenteNotti():
-							self.constr_ex_notti_poche_manovre[vigile] = self.solver.Constraint(num_medio_notti+4, self.solver.infinity(), "constr_ex_notti_poche_manovre({})".format(vigile))
+							self.constr_ex_extra_notti[vigile] = self.solver.Constraint(num_medio_notti+4, self.solver.infinity(), "constr_ex_extra_notti({})".format(vigile))
 							for giorno in self.var_notti.keys():
 								if vigile in self.var_notti[giorno]:
-									self.constr_ex_notti_poche_manovre[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+									self.constr_ex_extra_notti[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 
 						#CONSTR_EX: +1 festivo per vigili con poche manovre
 						if not self.DB[vigile].EsenteFestivi():
 							if self.DB[vigile].esenteCP():
-								self.constr_ex_festivi_poche_manovre[vigile] = self.solver.Constraint(max(_NUM_MIN_FESTIVI_ESENTI_CP, num_medio_festivi)+1, self.solver.infinity(), "constr_ex_festivi_poche_manovre({})".format(vigile))
+								self.constr_ex_extra_festivi[vigile] = self.solver.Constraint(max(_NUM_MIN_FESTIVI_ESENTI_CP, num_medio_festivi)+1, self.solver.infinity(), "constr_ex_extra_festivi({})".format(vigile))
 							else:
-								self.constr_ex_festivi_poche_manovre[vigile] = self.solver.Constraint(num_medio_festivi+1, self.solver.infinity(), "constr_ex_festivi_poche_manovre({})".format(vigile))
+								self.constr_ex_extra_festivi[vigile] = self.solver.Constraint(num_medio_festivi+1, self.solver.infinity(), "constr_ex_extra_festivi({})".format(vigile))
 							for giorno in self.var_notti.keys():
 								if giorno in self.var_festivi_vigile.keys():
-									self.constr_ex_festivi_poche_manovre[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
+									self.constr_ex_extra_festivi[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
 					else:
 						print("ATTENZIONE: il vigile {} ha 'PocheManovre' ma non conosco ancora il numero medio di servizi!".format(vigile))
 						print("\tIgnoro la richiesta di assegnare servizi extra.")
 						self.DB[vigile].eccezioni.remove("PocheManovre")
+
+				if self.DB[vigile].extraNotti():
+					notti_extra = [int(e[len("ExtraNotti"):]) for e in self.DB[vigile].eccezioni if "ExtraNotti" in e]
+					if num_medio_notti > 0:
+						#CONSTR_EX: +X notti per vigili con extraNotti
+						if not self.DB[vigile].EsenteNotti():
+							self.constr_ex_extra_notti[vigile] = self.solver.Constraint(num_medio_notti+notti_extra, self.solver.infinity(), "constr_ex_extra_notti({})".format(vigile))
+							for giorno in self.var_notti.keys():
+								if vigile in self.var_notti[giorno]:
+									self.constr_ex_extra_notti[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
+					else:
+						print("ATTENZIONE: il vigile {} ha 'ExtraNotti' ma non conosco ancora il numero medio di servizi!".format(vigile))
+						print("\tIgnoro la richiesta di assegnare notti extra.")
+						for e in self.DB[vigile].eccezioni:
+							if "ExtraNotti" in e:
+								self.DB[vigile].eccezioni.remove(e)
 
 			#CONSTR: no servizi il giorno di compleanno
 			if not servizi_compleanno:
