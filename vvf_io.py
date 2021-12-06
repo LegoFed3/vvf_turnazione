@@ -365,13 +365,13 @@ class VVFParser(argparse.ArgumentParser):
 							action="store_true")
 		self.add_argument("-j", "--jobs", type=int,
 							help="number of parallel threads to solve the model (Default: 1)",
-							default="1")
+							default=1)
 		self.add_argument("-l", "--loose",
 							help="enable assigning night shifts outside weekly availability",
 							action="store_true")
-		self.add_argument("-m", "--media-notti-festivi", type=int, action='store', nargs=2, 
-							help="average number of night and festivi shifts for regular firefighters, if set enables the 'PocheManovre' exception",
-							default=[-1, -1])
+		self.add_argument("-m", "--media-notti-festivi", type=int, action='store',
+							help="average number of night shifts for regular firefighters, if set enables the 'PocheManovre' exception",
+							default=-1) #nargs=2, default=[-1, -1]
 		self.add_argument("-o", "--organico-fn", type=str,
 							help="path to CSV containing the available firefigthers (Default: organico.csv)",
 							default="./organico.csv")

@@ -32,8 +32,8 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello
                         Default: 1
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
-  -m MEDIA_NOTTI MEDIA_FESTIVI, --media-notti-festivi MEDIA_NOTTI MEDIA_FESTIVI
-                        Numero medio di notti e festivi per vigile, abilita servizi extra per l'eccezione "PocheManovre"
+  -m MEDIA_NOTTI , --media-notti-festivi MEDIA_NOTTI
+                        Numero medio di notti per vigile, necessario a calcolare le notti per gradi ed eccezzioni
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
                         Default: organico.csv

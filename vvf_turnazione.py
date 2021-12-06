@@ -121,7 +121,6 @@ class TurnazioneVVF:
 		loose = args.loose
 		servizi_compleanno = args.servizi_compleanno
 		num_medio_notti = args.media_notti_festivi[0]
-		num_medio_festivi = args.media_notti_festivi[1]
 		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(args.organico_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
@@ -472,20 +471,20 @@ class TurnazioneVVF:
 				if compleanno in self.var_festivi_vigile.keys() and gruppo != 0:
 					self.constr_compleanno_vigile[vigile].SetCoefficient(self.var_festivi_vigile[compleanno][vigile], 1)
 
-			#VAR: somma (pesata) servizi per vigile (ausiliaria)
+			#VAR: somma servizi per vigile (ausiliaria)
 			self.var_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_sum_servizi_vigile({})".format(vigile))
 			#CONSTR: implementa quanto sopra
 			self.constr_servizi_vigile[vigile] = self.solver.Constraint(0, 0, "constr_somma_servizi_vigile({})".format(vigile))
 			self.constr_servizi_vigile[vigile].SetCoefficient(self.var_servizi_vigile[vigile], -1)
 			for giorno in range(len(self.var_notti.keys())):
 				if vigile in self.var_notti[giorno].keys():
-					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], self.DB[vigile].coeff_notti)
+					self.constr_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1)
 				if giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
-						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], self.DB[vigile].coeff_sabati)
+						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_sabati[giorno][vigile], 1)
 				if giorno in self.var_festivi_vigile.keys() and gruppo != 0:
 					if vigile in self.var_festivi_vigile[festivo].keys():
-						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1.1)
+						self.constr_servizi_vigile[vigile].SetCoefficient(self.var_festivi_vigile[giorno][vigile], 1)
 
 			#VAR: costo servizi per vigile (ausiliaria)
 			self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(), "var_aux_cost_servizi_vigile({})".format(vigile))
