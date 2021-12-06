@@ -263,12 +263,12 @@ class TurnazioneVVF:
 			if num_medio_notti > 0:
 				notti_attese = round(num_medio_notti / self.DB[vigile].coeff_notti)
 				notti_attese += self.DB[vigile].extraNotti()
-				if notti_attese > 9: # Notti extra
+				if notti_attese > num_medio_notti: # Notti extra
 					self.constr_notti_non_standard[vigile] = self.solver.Constraint(notti_attese, self.solver.infinity(), "constr_notti_non_standard({})".format(vigile))
 					for notte in self.var_notti.keys():
 						if vigile in self.var_notti[notte].keys():
 							self.constr_notti_non_standard[vigile].SetCoefficient(self.var_notti[notte][vigile], 1)
-				elif notti_attese < 8: # Notti in meno
+				elif notti_attese < num_medio_notti: # Notti in meno
 					self.constr_notti_non_standard[vigile] = self.solver.Constraint(-self.solver.infinity(), notti_attese, "constr_notti_non_standard({})".format(vigile))
 					for notte in self.var_notti.keys():
 						if vigile in self.var_notti[notte].keys():
