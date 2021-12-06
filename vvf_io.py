@@ -154,10 +154,10 @@ class Vigile:
 			print("\tIgnoro la squadra.")
 
 		# Coefficienti notti e sabati
-		self.coeff_notti = self.notti_base / 9.0
+		self.coeff_notti = 9.0 / self.notti_base
 		if "LimiteNotti" in self.eccezioni:
 			self.coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
-		self.coeff_sabati = self.sabati_base / 1.0 + 0.1 # Per favorire assegnazione stesso numero
+		self.coeff_sabati = 1.1 / self.sabati_base # Per favorire assegnazione stesso numero
 
 	def __str__(self): # Called by print()
 		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
@@ -198,8 +198,8 @@ class Vigile:
 	def extraNotti(self):
 		for e in self.eccezioni:
 			if "ExtraNotti" in e:
-				return True
-		return False
+				return int(e[len("ExtraNotti"):])
+		return 0
 
 	def esenteCP(self):
 		if "EsenteCP" in self.eccezioni:
@@ -335,10 +335,10 @@ def calcola_coefficienti(db):
 		if db[vigile].neo_vigile:
 			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
 
-		db[vigile].coeff_notti = db[vigile].notti_base / 9.0
+		db[vigile].coeff_notti = 9.0 / db[vigile].notti_base
 		if "LimiteNotti" in db[vigile].eccezioni:
 			db[vigile].coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
-		db[vigile].coeff_sabati = db[vigile].sabati_base / 1.0 + 0.1 # Per favorire assegnazione stesso numero
+		db[vigile].coeff_sabati = 1.1 / db[vigile].sabati_base # Per favorire assegnazione stesso numero
 	return db
 
 def date(string):
