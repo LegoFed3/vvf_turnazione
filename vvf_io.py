@@ -82,6 +82,16 @@ _ECCEZZIONI_VALIDE = [
 	"LimiteNotti8",
 	"LimiteNotti9",
 	"LimiteNotti10",
+	"ExtraNotti1",
+	"ExtraNotti2",
+	"ExtraNotti3",
+	"ExtraNotti4",
+	"ExtraNotti5",
+	"ExtraNotti6",
+	"ExtraNotti7",
+	"ExtraNotti8",
+	"ExtraSabati1",
+	"ExtraSabati2",
 	]
 
 class Vigile:
@@ -187,6 +197,18 @@ class Vigile:
 			or "Aspettativa" in self.eccezioni
 			):
 			return True
+		return False
+
+	def extraSabati(self):
+		for e in self.eccezioni:
+			if "ExtraSabati" in e:
+				return True
+		return False
+
+	def extraNotti(self):
+		for e in self.eccezioni:
+			if "ExtraNotti" in e:
+				return True
 		return False
 
 	def esenteCP(self):

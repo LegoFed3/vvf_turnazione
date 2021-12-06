@@ -279,15 +279,20 @@ class TurnazioneVVF:
 
 			if not self.DB[vigile].EsenteSabati() and not self.DB[vigile].Aspirante():
 
+				#Sabati extra
+				sabati_extra = 0
+				if self.DB[vigile].extraSabati():
+					sabati_extra = [int(e[len("ExtraSabati"):]) for e in self.DB[vigile].eccezioni if "ExtraSabati" in e]
+
 				#Saltare sabati per Comandante, Vice e Capiplotone se vigili sufficienti
 				if self.DB[vigile].grado in ["Comandante", "Vicecomandante", "Capoplotone"] and not sabati_gradi_alti:
 					self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 0, "constr_un_sabato_vigile({})".format(vigile))
 				else:
 					#CONSTR: max 1 sabato, se possibile
-					if sabati_minimi == 0:
+					if (sabati_minimi + sabati_extra) == 0:
 						self.constr_sabati_vigile[vigile] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_un_sabato_vigile({})".format(vigile))
 					else:
-						self.constr_sabati_vigile[vigile] = self.solver.Constraint(sabati_minimi, sabati_minimi+1, "constr_un_sabato_vigile({})".format(vigile))
+						self.constr_sabati_vigile[vigile] = self.solver.Constraint(sabati_minimi+sabati_extra, sabati_minimi+sabati_extra+1, "constr_un_sabato_vigile({})".format(vigile))
 					for sabato in self.var_sabati.keys():
 						self.constr_sabati_vigile[vigile].SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
