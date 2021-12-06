@@ -293,7 +293,7 @@ def read_csv_riporti(db, filename):
 					db[id].passato_servizi_extra = int(line[1])
 					db[id].passato_capodanni = int(line[2])
 					db[id].passato_sabati = list(map(lambda x: int(x), line[3:13]))
-					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:17]))
+					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:23]))
 	fi.close()
 	return db
 

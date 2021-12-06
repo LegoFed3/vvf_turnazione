@@ -120,7 +120,7 @@ class TurnazioneVVF:
 			exit(-1)
 		loose = args.loose
 		servizi_compleanno = args.servizi_compleanno
-		num_medio_notti = args.media_notti_festivi[0]
+		num_medio_notti = args.media_notti_festivi #[0]
 		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(args.organico_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
@@ -664,15 +664,16 @@ class TurnazioneVVF:
 					and not self.DB[vigile].AltreCariche()
 					and "Aspettativa" not in self.DB[vigile].eccezioni
 					and not self.DB[vigile].neo_vigile
+					and len(self.DB[vigile].eccezioni) == 0
 					):
 					servizi_extra = round(self.DB[vigile].NumeroServizi() - media_servizi)
 				line += "{};".format(servizi_extra)
 				line += "{};".format(self.DB[vigile].passato_capodanni + self.DB[vigile].capodanno)
-				line += "{};".format(self.DB[vigile].sabati)
-				for sabati in self.DB[vigile].passato_sabati[0:9]:
+				line += "{};".format(self.DB[vigile].sabati - self.DB[vigile].extraSabati())
+				for sabati in self.DB[vigile].passato_sabati[0:8]:
 					line += "{};".format(sabati)
 				line += "{};".format(self.DB[vigile].festivi_onerosi)
-				for festivi in self.DB[vigile].passato_festivi_onerosi[0:9]:
+				for festivi in self.DB[vigile].passato_festivi_onerosi[0:8]:
 					line += "{};".format(festivi)
 				out.write(line+"\n")
 			out.close()
