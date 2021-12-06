@@ -25,6 +25,7 @@ _ECCEZZIONI_VALIDE = [
 	"Aspettativa",
 	"EsenteCP",
 	"EsenteNotti",
+	"EsenteSabati",
 	"PocheManovre",
 	"NottiSoloSabatoFestivi",
 	"NoNottiGiornoLun",
@@ -221,6 +222,7 @@ class Vigile:
 			or self.Aspirante()
 			or self.grado == "Complemento"
 			or "Aspettativa" in self.eccezioni
+			or "EsenteSabati" in self.eccezioni
 			):
 			return True
 		return False
