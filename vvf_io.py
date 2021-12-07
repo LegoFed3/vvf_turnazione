@@ -145,13 +145,11 @@ class Vigile:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
 		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
-			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}!".format(self.id, self.gruppo_festivo))
+			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}! Ignoro il gruppo festivo.".format(self.id, self.gruppo_festivo))
 			self.gruppo_festivo = 0
-			print("\tIgnoro il gruppo festivo.")
 		if "Aspettativa" in self.eccezioni and self.squadre != [0]:
-			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}!".format(self.id, self.squadre))
+			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}! Ignoro la squadra.".format(self.id, self.squadre))
 			self.squadre = [0]
-			print("\tIgnoro la squadra.")
 
 		# Coefficienti notti e sabati
 		self.coeff_notti = 9.0 / self.notti_base
