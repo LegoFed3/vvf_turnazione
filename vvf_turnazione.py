@@ -514,6 +514,8 @@ class TurnazioneVVF:
 				if vigile in self.var_notti[giorno].keys():
 					if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
 						mul_notte_squadra = 2 # Notti NON di squadra costano di più
+						if self.DB[vigile].extraNotti() > 0:
+							mul_notte_squadra = 1.2 # con notti in più paga meno a metterle fuori settimana
 					self.constr_cost_servizi_vigile[vigile].SetCoefficient(self.var_notti[giorno][vigile], 1 * mul_compleanno * mul_notte_squadra + pen_notti_onerose)
 				if giorno in self.var_sabati.keys():
 					if vigile in self.var_sabati[giorno].keys():
