@@ -107,14 +107,14 @@ class Vigile:
 	notti = 0
 	sabati = 0
 	festivi = 0
-	notti_base = 9.0
-	sabati_base = 1.0
 	capodanno = 0
 	festivi_onerosi = 0
 	passato_festivi_onerosi = [0]*10
 	passato_sabati = [0]*10
 	passato_servizi_extra = 0
 	passato_capodanni = 0
+	notti_base = 9.0
+	sabati_base = 1.0
 	esente_cp = False
 	aspirante_passa_a_vigile = False
 	mesi_da_vigile = 12
