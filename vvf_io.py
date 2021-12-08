@@ -145,6 +145,8 @@ class Vigile:
 			if e not in _ECCEZZIONI_VALIDE:
 				print("ERRORE: eccezione sconosciuta ", e)
 				exit(-1)
+			if "ExtraNotti" in e:
+				self.notti_non_standard = True
 		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
 			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}! Ignoro il gruppo festivo.".format(self.id, self.gruppo_festivo))
 			self.gruppo_festivo = 0
@@ -374,9 +376,9 @@ class VVFParser(argparse.ArgumentParser):
 		self.add_argument("-l", "--loose",
 							help="enable assigning night shifts outside weekly availability",
 							action="store_true")
-		self.add_argument("-m", "--media-notti-festivi", type=int, action='store',
-							help="average number of night shifts for regular firefighters, if set enables the 'PocheManovre' exception",
-							default=-1) #nargs=2, default=[-1, -1]
+		self.add_argument("-m", "--media-notti", type=str, action='store',
+							help="average number of night shifts for regular firefighters",
+							default="0+") #nargs=2, default=[-1, -1]
 		self.add_argument("-o", "--organico-fn", type=str,
 							help="path to CSV containing the available firefigthers (Default: organico.csv)",
 							default="./organico.csv")
