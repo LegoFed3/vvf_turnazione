@@ -119,6 +119,7 @@ class Vigile:
 	aspirante_passa_a_vigile = False
 	mesi_da_vigile = 12
 	neo_vigile = False
+	notti_non_standard = False
 
 	def __init__(self, *args):
 		self.id = int(args[0][0])
@@ -153,8 +154,6 @@ class Vigile:
 
 		# Coefficienti notti e sabati
 		self.coeff_notti = 9.0 / self.notti_base
-		if "LimiteNotti" in self.eccezioni:
-			self.coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
 		self.coeff_sabati = 1.1 / self.sabati_base # Per favorire assegnazione stesso numero
 
 	def __str__(self): # Called by print()
@@ -313,11 +312,14 @@ def calcola_coefficienti(db):
 		if db[vigile].grado == "Comandante":
 			db[vigile].notti_base = 3.0
 			db[vigile].sabati_base = 0.5
+			db[vigile].notti_non_standard = True
 		elif db[vigile].grado == "Vicecomandante":
 			db[vigile].notti_base = 4.0
 			db[vigile].sabati_base = 0.5
+			db[vigile].notti_non_standard = True
 		elif db[vigile].grado in ["Capoplotone", "Caposquadra"]:
 			db[vigile].notti_base = 7.0
+			db[vigile].notti_non_standard = True
 		if (
 			"Segretario" in db[vigile].eccezioni
 			or "Cassiere" in db[vigile].eccezioni
@@ -326,16 +328,21 @@ def calcola_coefficienti(db):
 			or "Resp. Allievi" in db[vigile].eccezioni
 			):
 			db[vigile].notti_base = min(db[vigile].notti_base, 5.0)
+			db[vigile].notti_non_standard = True
 		if "DaTrasferimento" in db[vigile].eccezioni:
 			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
+			db[vigile].notti_non_standard = True
 		if "EsenteCP" in db[vigile].eccezioni:
 			db[vigile].notti_base = max(db[vigile].notti_base, 15.0)
+			db[vigile].notti_non_standard = True
 		if db[vigile].neo_vigile:
 			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
+			db[vigile].notti_non_standard = True
 
 		db[vigile].coeff_notti = 9.0 / db[vigile].notti_base
 		if "LimiteNotti" in db[vigile].eccezioni:
 			db[vigile].coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
+			db[vigile].notti_non_standard = True
 		db[vigile].coeff_sabati = 1.1 / db[vigile].sabati_base # Per favorire assegnazione stesso numero
 	return db
 
