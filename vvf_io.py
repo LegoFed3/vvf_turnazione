@@ -21,6 +21,7 @@ _ECCEZZIONI_VALIDE = [
 	"Magazziniere",
 	"Vicemagazziniere",
 	"Resp. Allievi",
+	"Neo-assunto",
 	# Esenzioni
 	"Aspettativa",
 	"EsenteCP",
@@ -172,7 +173,7 @@ class Vigile:
 		return self.__str__()
 
 	def EsenteServizi(self):
-		if (self.grado in ["Ispettore", "Presidente"]
+		if (self.grado in ["Ispettore", "Presidente", "Complemento"]
 			or "Aspettativa" in self.eccezioni
 			):
 			return True
@@ -195,10 +196,11 @@ class Vigile:
 		return 0
 
 	def extraNotti(self):
+		res = 0
 		for e in self.eccezioni:
 			if "ExtraNotti" in e:
-				return int(e[len("ExtraNotti"):])
-		return 0
+				res = max(res, int(e[len("ExtraNotti"):]))
+		return res
 
 	def esenteCP(self):
 		if "EsenteCP" in self.eccezioni:
@@ -206,42 +208,29 @@ class Vigile:
 		return False
 
 	def EsenteSabati(self):
-		if (self.EsenteServizi()
+		return (self.EsenteServizi()
 			or self.Aspirante()
 			or self.grado == "Complemento"
 			or "Aspettativa" in self.eccezioni
-			or "EsenteSabati" in self.eccezioni
-			):
-			return True
-		return False
+			or "EsenteSabati" in self.eccezioni)
 
 	def EsenteFestivi(self):
-		if (self.EsenteServizi()
+		return (self.EsenteServizi()
 			or self.gruppo_festivo == 0
-			or "Aspettativa" in self.eccezioni
-			):
-			return True
-		return False
+			or "Aspettativa" in self.eccezioni)
 
 	def Aspirante(self):
-		if self.grado == "Aspirante" and not self.aspirante_passa_a_vigile:
-			return True
-		return False
+		return self.grado == "Aspirante" and not self.aspirante_passa_a_vigile
 
 	def Graduato(self):
-		if self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]:
-			return True
-		return False
+		return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
 
 	def AltreCariche(self):
-		if ("Segretario" in self.eccezioni
+		return ("Segretario" in self.eccezioni
 			or "Cassiere" in self.eccezioni
 			or "Magazziniere" in self.eccezioni
 			or "Vicemagazziniere" in self.eccezioni
-			or "Resp. Allievi" in self.eccezioni
-			):
-			return True
-		return False
+			or "Resp. Allievi" in self.eccezioni)
 
 	def OffsetCompleanno(self, data_inizio):
 		if (
@@ -296,18 +285,18 @@ def read_csv_riporti(db, filename):
 	fi.close()
 	return db
 
-def correggi_aspiranti(db, data_inizio, data_fine):
-	for vigile in db.keys():
-		if (
-			db[vigile].grado == "Aspirante"
-			and db[vigile].data_passaggio_vigile > data_inizio
-			and db[vigile].data_passaggio_vigile < data_fine
-			):
-			db[vigile].aspirante_passa_a_vigile = True
-			db[vigile].mesi_da_vigile = round((data_fine - db[vigile].data_passaggio_vigile).days / 30.0)
-		if db[vigile].data_passaggio_vigile + dt.timedelta(365*2) > data_inizio:
-			db[vigile].neo_vigile = True
-	return db
+# def correggi_aspiranti(db, data_inizio, data_fine):
+	# for vigile in db.keys():
+		# if (
+			# db[vigile].grado == "Aspirante"
+			# and db[vigile].data_passaggio_vigile > data_inizio
+			# and db[vigile].data_passaggio_vigile < data_fine
+			# ):
+			# db[vigile].aspirante_passa_a_vigile = True
+			# db[vigile].mesi_da_vigile = round((data_fine - db[vigile].data_passaggio_vigile).days / 30.0)
+		# if db[vigile].data_passaggio_vigile + dt.timedelta(365*2) > data_inizio:
+			# db[vigile].neo_vigile = True
+	# return db
 
 def calcola_coefficienti(db):
 	for vigile in db.keys():
@@ -337,7 +326,8 @@ def calcola_coefficienti(db):
 		if "EsenteCP" in db[vigile].eccezioni:
 			db[vigile].notti_base = max(db[vigile].notti_base, 15.0)
 			db[vigile].notti_non_standard = True
-		if db[vigile].neo_vigile:
+		if "Neo-assunto" in db[vigile].eccezioni:
+			db[vigile].neo_vigile = True
 			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
 			db[vigile].notti_non_standard = True
 
