@@ -1,9 +1,20 @@
 import time
 import datetime as dt
+import argparse
 import vvf_turnazione as vvf
 import vvf_io as vvfio
 
+
 # Command line argument parser
+def date(string):
+	try:
+		date = list(map(int, string.split("-")))
+		date = dt.date(date[0], date[1], date[2])
+		return date
+	except:
+		msg = "{} is not a valid date string (expected format: YYYY-MM-DD)".format(string)
+		raise argparse.ArgumentTypeError(msg)
+
 class VVFParser(argparse.ArgumentParser):
 	def __init__(self):
 		super().__init__(description="Compute yearly shifts for volunteer firefighters")

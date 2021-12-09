@@ -1,6 +1,5 @@
 import datetime as dt
 import os
-import argparse
 
 _GRADI_VALIDI = [
 	"Comandante",
@@ -118,7 +117,6 @@ class Vigile:
 	notti_base = 9.0
 	sabati_base = 1.0
 	esente_cp = False
-	aspirante_passa_a_vigile = False
 	mesi_da_vigile = 12
 	notti_non_standard = False
 
@@ -200,28 +198,36 @@ class Vigile:
 	def __repr__(self):
 		return self.__str__()
 
-	def EsenteServizi(self):
-		if (self.grado in ["Ispettore", "Presidente", "Complemento"]
-			or "Aspettativa" in self.eccezioni
-			):
-			return True
-		return False
+	def esenteServizi(self):
+		return (self.grado in ["Ispettore", "Presidente", "Complemento"]
+			or "Aspettativa" in self.eccezioni)
 
-	def EsenteNotti(self):
-		if (self.EsenteServizi() 
-			or self.Aspirante()
+	def esenteNotti(self):
+		return (self.esenteServizi()
+			or self.grado == "Aspirante"
+			or self.grado == "Complemento"
 			or "EsenteNotti" in self.eccezioni
+			or "Aspettativa" in self.eccezioni)
+
+	def esenteSabati(self):
+		return (self.esenteServizi()
+			or self.grado == "Aspirante"
 			or self.grado == "Complemento"
 			or "Aspettativa" in self.eccezioni
-			):
-			return True
-		return False
+			or "EsenteSabati" in self.eccezioni)
+
+	def esenteFestivi(self):
+		return (self.esenteServizi()
+			or self.gruppo_festivo == 0
+			or "Aspettativa" in self.eccezioni)
+
 
 	def extraSabati(self):
+		res = 0
 		for e in self.eccezioni:
 			if "ExtraSabati" in e:
-				return int(e[len("ExtraSabati"):])
-		return 0
+				res = max(res, int(e[len("ExtraSabati"):]))
+		return res
 
 	def extraNotti(self):
 		res = 0
@@ -235,32 +241,17 @@ class Vigile:
 			return True
 		return False
 
-	def EsenteSabati(self):
-		return (self.EsenteServizi()
-			or self.Aspirante()
-			or self.grado == "Complemento"
-			or "Aspettativa" in self.eccezioni
-			or "EsenteSabati" in self.eccezioni)
-
-	def EsenteFestivi(self):
-		return (self.EsenteServizi()
-			or self.gruppo_festivo == 0
-			or "Aspettativa" in self.eccezioni)
-
-	def Aspirante(self):
-		return self.grado == "Aspirante" and not self.aspirante_passa_a_vigile
-
-	def Graduato(self):
+	def graduato(self):
 		return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
 
-	def AltreCariche(self):
+	def altreCariche(self):
 		return ("Segretario" in self.eccezioni
 			or "Cassiere" in self.eccezioni
 			or "Magazziniere" in self.eccezioni
 			or "Vicemagazziniere" in self.eccezioni
 			or "Resp. Allievi" in self.eccezioni)
 
-	def OffsetCompleanno(self, data_inizio):
+	def offsetCompleanno(self, data_inizio):
 		if (
 			self.data_di_nascita.month <= data_inizio.month
 			and self.data_di_nascita.day < data_inizio.day
@@ -271,7 +262,7 @@ class Vigile:
 		offset = (compleanno - data_inizio).days
 		return offset
 
-	def NumeroServizi(self):
+	def numeroServizi(self):
 		return self.notti + self.sabati + self.festivi
 
 def read_csv_vigili(filename):
@@ -312,12 +303,3 @@ def read_csv_riporti(db, filename):
 					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:23]))
 	fi.close()
 	return db
-
-def date(string):
-	try:
-		date = list(map(int, string.split("-")))
-		date = dt.date(date[0], date[1], date[2])
-		return date
-	except:
-		msg = "{} is not a valid date string (expected format: YYYY-MM-DD)".format(string)
-		raise argparse.ArgumentTypeError(msg)
