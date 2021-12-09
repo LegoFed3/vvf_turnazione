@@ -253,16 +253,19 @@ class TurnazioneVVF:
 			giorno += 7
 
 		# Verifica numero di sabati e festivi
-		lista_FESTIVI = list(self.var_festivi_gruppo.keys())
-		lista_SABATI = list(self.var_sabati.keys())
-		print("\tL'anno avrà {} sabati e {} festivi.".format(len(lista_SABATI), len(lista_FESTIVI)))
-		lista_GRUPPI_FESTIVO = list(self.vigili_gruppi_festivo.keys())
-		media_festivi = len(lista_FESTIVI) / len(lista_GRUPPI_FESTIVO)
+		_LIST_FESTIVI = list(self.var_festivi_gruppo.keys())
+		_LIST_SABATI = list(self.var_sabati.keys())
+		_LIST_GRUPPI_FESTIVO = list(self.vigili_gruppi_festivo.keys())
+		num_sabati = len(_LIST_SABATI)
+		num_vigili_per_sabati = len(self.var_sabati[1]) #Giorno 1 è sabato perchè 0 è venerdì
+
+		media_festivi = len(_LIST_FESTIVI) / len(_LIST_GRUPPI_FESTIVO)
 		_NUM_MIN_FESTIVI = math.floor(media_festivi)
 		_NUM_MAX_FESTIVI = math.ceil(media_festivi)
-		print("\tCon {} squadre festivi assegnerò {}-{} servizi festivi a testa.".format(len(lista_GRUPPI_FESTIVO), _NUM_MIN_FESTIVI, _NUM_MAX_FESTIVI))
-		num_sabati = len(self.var_sabati.keys())
-		num_vigili_per_sabati = len(self.var_sabati[1]) #Giorno 1 è sabato perchè 0 è venerdì
+
+		print("\tL'anno avrà {} sabati e {} festivi.".format(len(_LIST_SABATI), len(_LIST_FESTIVI)))
+		print("\tCon {} squadre festivi assegnerò {}-{} servizi festivi a testa.".format(len(_LIST_GRUPPI_FESTIVO), _NUM_MIN_FESTIVI, _NUM_MAX_FESTIVI))
+
 		sabati_extra_tot = sum([v.extraSabati() for v in self.DB.values()])
 		_NUM_MIN_SABATI = 0
 		_NUM_MAX_SABATI = 1
@@ -396,18 +399,18 @@ class TurnazioneVVF:
 			#CONSTR: spazia i festivi perchè non siano troppo ravvicinati
 			if (gruppo not in self.constr_festivi_spaziati.keys() and gruppo != 0):
 				self.constr_festivi_spaziati[gruppo] = {}
-				for i, festivo in enumerate(lista_FESTIVI):
+				for i, festivo in enumerate(_LIST_FESTIVI):
 					self.constr_festivi_spaziati[gruppo][i] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_festivi_spaziati_gruppo({})_festivo({})".format(gruppo, festivo))
-					for j in range(max(0, i-_SPAZIATORE_FESTIVI), min(i+_SPAZIATORE_FESTIVI, len(lista_FESTIVI))):
-						self.constr_festivi_spaziati[gruppo][i].SetCoefficient(self.var_festivi_gruppo[lista_FESTIVI[j]][gruppo], 1)
+					for j in range(max(0, i-_SPAZIATORE_FESTIVI), min(i+_SPAZIATORE_FESTIVI, len(_LIST_FESTIVI))):
+						self.constr_festivi_spaziati[gruppo][i].SetCoefficient(self.var_festivi_gruppo[_LIST_FESTIVI[j]][gruppo], 1)
 
 			#CONSTR: spazia i sabati perchè non siano troppo ravvicinati
 			if not self.DB[vigile].esenteSabati():
 				self.constr_sabati_spaziati[vigile] = {}
-				for i, sabato in enumerate(lista_SABATI):
+				for i, sabato in enumerate(_LIST_SABATI):
 					self.constr_sabati_spaziati[vigile][i] = self.solver.Constraint(-self.solver.infinity(), 1, "constr_festivi_spaziati_vigile({})_sabato({})".format(vigile, sabato))
-					for j in range(max(0, i-_SPAZIATORE_SABATI), min(i+_SPAZIATORE_SABATI, len(lista_SABATI))):
-						self.constr_sabati_spaziati[vigile][i].SetCoefficient(self.var_sabati[lista_SABATI[j]][vigile], 1)
+					for j in range(max(0, i-_SPAZIATORE_SABATI), min(i+_SPAZIATORE_SABATI, len(_LIST_SABATI))):
+						self.constr_sabati_spaziati[vigile][i].SetCoefficient(self.var_sabati[_LIST_SABATI[j]][vigile], 1)
 
 			#CONSTR: max festivi anno
 			#NOTA: aggiunto un minimo per "forzare" il calcolo di una distribuzione equa rapidamente
