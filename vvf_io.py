@@ -25,7 +25,7 @@ _ECCEZZIONI_VALIDE = [
 	"DaTrasferimento",
 	# Esenzioni
 	"Aspettativa",
-	"EsenteCP",
+	# "EsenteCP",
 	"EsenteNotti",
 	"EsenteSabati",
 	"NottiSoloSabatoFestivi",
@@ -175,9 +175,9 @@ class Vigile:
 		if "DaTrasferimento" in self.eccezioni or "NeoAssunto" in self.eccezioni:
 			self.notti_base = max(self.notti_base, 12.0)
 			self.notti_non_standard = True
-		if "EsenteCP" in self.eccezioni:
-			self.notti_base = max(self.notti_base, 15.0)
-			self.notti_non_standard = True
+		# if "EsenteCP" in self.eccezioni:
+			# self.notti_base = max(self.notti_base, 15.0)
+			# self.notti_non_standard = True
 
 		self.coeff_notti = 9.0 / self.notti_base
 		if "LimiteNotti" in self.eccezioni:
@@ -186,14 +186,10 @@ class Vigile:
 		self.coeff_sabati = 1.1 / self.sabati_base # Per favorire assegnazione stesso numero
 
 	def __str__(self): # Called by print()
-		return "Vigile({}, {}, {}, {}, Squadra:{}, GruppoFestivo: {})".format(
-				self.nome, 
-				self.cognome, 
-				self.data_di_nascita.strftime('%d/%m/%Y'), 
-				self.grado, 
-				self.squadre,
-				self.gruppo_festivo
-				)
+		s = "{:03d} {}".format(self.id, self.grado)
+		if self.neoAssunto():
+			s += "*"
+		return s + " {} {}".format(self.nome, self.cognome)
 
 	def __repr__(self):
 		return self.__str__()
@@ -236,10 +232,11 @@ class Vigile:
 				res = max(res, int(e[len("ExtraNotti"):]))
 		return res
 
-	def esenteCP(self):
-		if "EsenteCP" in self.eccezioni:
-			return True
-		return False
+	def neoAssunto(self):
+		return "NeoAssunto" in self.eccezioni or "DaTrasferimento" in self.eccezioni
+
+	# def esenteCP(self):
+		# return "EsenteCP" in self.eccezioni
 
 	def graduato(self):
 		return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
