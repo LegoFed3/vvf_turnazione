@@ -21,7 +21,9 @@ _ECCEZZIONI_VALIDE = [
 	"Magazziniere",
 	"Vicemagazziniere",
 	"Resp. Allievi",
-	"Neo-assunto",
+	# Neo-assunti
+	"NeoAssunto",
+	"DaTrasferimento",
 	# Esenzioni
 	"Aspettativa",
 	"EsenteCP",
@@ -100,7 +102,6 @@ class Vigile:
 	nome = ""
 	cognome = ""
 	data_di_nascita = dt.date(1900, 1, 1)
-	data_passaggio_vigile = dt.date(1900, 1, 1)
 	grado = "Vigile"
 	squadre = []
 	gruppo_festivo = 0
@@ -119,7 +120,6 @@ class Vigile:
 	esente_cp = False
 	aspirante_passa_a_vigile = False
 	mesi_da_vigile = 12
-	neo_vigile = False
 	notti_non_standard = False
 
 	def __init__(self, *args):
@@ -128,23 +128,21 @@ class Vigile:
 		self.cognome = args[0][2]
 		self.data_di_nascita = dt.datetime.strptime(args[0][3], '%d/%m/%Y').date()
 		self.grado = args[0][4]
-		if self.grado not in _GRADI_VALIDI:
-			print("ERRORE! Grado sconosciuto: ", self.grado)
-			exit(-1)
 		self.squadre = list(map(int, args[0][5].split(",")))
-		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
-			self.squadre = [0]
 		self.gruppo_festivo = int(args[0][6])
-		if len(args[0][7]) > 0:
-			self.data_passaggio_vigile = dt.datetime.strptime(args[0][7], '%d/%m/%Y').date()
-		self.eccezioni = set(args[0][8].split(","))
+		self.eccezioni = set(args[0][7].strip(" ").split(","))
 		if '' in self.eccezioni:
 			self.eccezioni.remove('')
 
 		# Verifiche
+		if self.grado not in _GRADI_VALIDI:
+			print("ERRORE! Grado sconosciuto: ", self.grado)
+			exit(-1)
+		if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
+			self.squadre = [0]
 		for e in self.eccezioni:
 			if e not in _ECCEZZIONI_VALIDE:
-				print("ERRORE: eccezione sconosciuta ", e)
+				print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
 				exit(-1)
 			if "ExtraNotti" in e:
 				self.notti_non_standard = True
@@ -156,7 +154,37 @@ class Vigile:
 			self.squadre = [0]
 
 		# Coefficienti notti e sabati
+		if self.grado == "Comandante":
+			self.notti_base = 3.0
+			self.sabati_base = 0.5
+			self.notti_non_standard = True
+		elif self.grado == "Vicecomandante":
+			self.notti_base = 4.0
+			self.sabati_base = 0.5
+			self.notti_non_standard = True
+		elif self.grado in ["Capoplotone", "Caposquadra"]:
+			self.notti_base = 7.0
+			self.notti_non_standard = True
+		if (
+			"Segretario" in self.eccezioni
+			or "Cassiere" in self.eccezioni
+			or "Magazziniere" in self.eccezioni
+			or "Vicemagazziniere" in self.eccezioni
+			or "Resp. Allievi" in self.eccezioni
+			):
+			self.notti_base = min(self.notti_base, 5.0)
+			self.notti_non_standard = True
+		if "DaTrasferimento" in self.eccezioni or "NeoAssunto" in self.eccezioni:
+			self.notti_base = max(self.notti_base, 12.0)
+			self.notti_non_standard = True
+		if "EsenteCP" in self.eccezioni:
+			self.notti_base = max(self.notti_base, 15.0)
+			self.notti_non_standard = True
+
 		self.coeff_notti = 9.0 / self.notti_base
+		if "LimiteNotti" in self.eccezioni:
+			self.coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
+			self.notti_non_standard = True
 		self.coeff_sabati = 1.1 / self.sabati_base # Per favorire assegnazione stesso numero
 
 	def __str__(self): # Called by print()
@@ -285,59 +313,6 @@ def read_csv_riporti(db, filename):
 	fi.close()
 	return db
 
-# def correggi_aspiranti(db, data_inizio, data_fine):
-	# for vigile in db.keys():
-		# if (
-			# db[vigile].grado == "Aspirante"
-			# and db[vigile].data_passaggio_vigile > data_inizio
-			# and db[vigile].data_passaggio_vigile < data_fine
-			# ):
-			# db[vigile].aspirante_passa_a_vigile = True
-			# db[vigile].mesi_da_vigile = round((data_fine - db[vigile].data_passaggio_vigile).days / 30.0)
-		# if db[vigile].data_passaggio_vigile + dt.timedelta(365*2) > data_inizio:
-			# db[vigile].neo_vigile = True
-	# return db
-
-def calcola_coefficienti(db):
-	for vigile in db.keys():
-		if db[vigile].grado == "Comandante":
-			db[vigile].notti_base = 3.0
-			db[vigile].sabati_base = 0.5
-			db[vigile].notti_non_standard = True
-		elif db[vigile].grado == "Vicecomandante":
-			db[vigile].notti_base = 4.0
-			db[vigile].sabati_base = 0.5
-			db[vigile].notti_non_standard = True
-		elif db[vigile].grado in ["Capoplotone", "Caposquadra"]:
-			db[vigile].notti_base = 7.0
-			db[vigile].notti_non_standard = True
-		if (
-			"Segretario" in db[vigile].eccezioni
-			or "Cassiere" in db[vigile].eccezioni
-			or "Magazziniere" in db[vigile].eccezioni
-			or "Vicemagazziniere" in db[vigile].eccezioni
-			or "Resp. Allievi" in db[vigile].eccezioni
-			):
-			db[vigile].notti_base = min(db[vigile].notti_base, 5.0)
-			db[vigile].notti_non_standard = True
-		if "DaTrasferimento" in db[vigile].eccezioni:
-			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
-			db[vigile].notti_non_standard = True
-		if "EsenteCP" in db[vigile].eccezioni:
-			db[vigile].notti_base = max(db[vigile].notti_base, 15.0)
-			db[vigile].notti_non_standard = True
-		if "Neo-assunto" in db[vigile].eccezioni:
-			db[vigile].neo_vigile = True
-			db[vigile].notti_base = max(db[vigile].notti_base, 12.0)
-			db[vigile].notti_non_standard = True
-
-		db[vigile].coeff_notti = 9.0 / db[vigile].notti_base
-		if "LimiteNotti" in db[vigile].eccezioni:
-			db[vigile].coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
-			db[vigile].notti_non_standard = True
-		db[vigile].coeff_sabati = 1.1 / db[vigile].sabati_base # Per favorire assegnazione stesso numero
-	return db
-
 def date(string):
 	try:
 		date = list(map(int, string.split("-")))
@@ -346,36 +321,3 @@ def date(string):
 	except:
 		msg = "{} is not a valid date string (expected format: YYYY-MM-DD)".format(string)
 		raise argparse.ArgumentTypeError(msg)
-
-class VVFParser(argparse.ArgumentParser):
-	def __init__(self):
-		super().__init__(description="Compute yearly shifts for volunteer firefighters")
-
-		#Positional Arguments
-		self.add_argument("data_di_inizio", type=date, help="start date, which must be a Friday")
-		self.add_argument("data_di_fine", type=date, help="end date, which must be a Friday")
-		self.add_argument("squadra_di_partenza", type=int, help="starting squad for weekly availability")
-
-		#Optional Arguments
-		self.add_argument("-c", "--servizi-compleanno",
-							help="enable assigning shifts on firefighter's birthdays",
-							action="store_true")
-		self.add_argument("-j", "--jobs", type=int,
-							help="number of parallel threads to solve the model (Default: 1)",
-							default=1)
-		self.add_argument("-l", "--loose",
-							help="enable assigning night shifts outside weekly availability",
-							action="store_true")
-		self.add_argument("-m", "--media-notti", type=str, action='store',
-							help="average number of night shifts for regular firefighters",
-							default="0+") #nargs=2, default=[-1, -1]
-		self.add_argument("-o", "--organico-fn", type=str,
-							help="path to CSV containing the available firefigthers (Default: organico.csv)",
-							default="./organico.csv")
-		self.add_argument("-r", "--riporti-fn", type=str,
-							help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
-							default="./riporti.csv")
-		self.add_argument("-t", "--time-limit", type=int,
-							help="time limit in seconds (Default: no limit)", default=0)
-		self.add_argument("-v", "--verbose", help="enable verbose solver output",
-							action="store_true")

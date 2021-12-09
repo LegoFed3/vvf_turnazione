@@ -133,8 +133,6 @@ class TurnazioneVVF:
 		self._computeServiziSpecialiOnerosi()
 		self.DB = vvf_io.read_csv_vigili(args.organico_fn)
 		self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
-		# self.DB = vvf_io.correggi_aspiranti(self.DB, self.data_inizio, self.data_fine)
-		self.DB = vvf_io.calcola_coefficienti(self.DB)
 		self.vigili = list(self.DB.keys())
 		self.vigili_squadra = {}
 		self.vigili_gruppi_festivo = {}
@@ -646,7 +644,7 @@ class TurnazioneVVF:
 
 	def vigileToStr(self, vigile):
 		line = "{:03d} {}".format(vigile, self.DB[vigile].grado)
-		if self.DB[vigile].neo_vigile:
+		if "NeoAssunto" in self.DB[vigile].eccezioni or "DaTrasferimento" in self.DB[vigile].eccezioni:
 			line += "*"
 		line += " {} {}".format(self.DB[vigile].nome, self.DB[vigile].cognome)
 		return line
@@ -721,7 +719,6 @@ class TurnazioneVVF:
 					and not self.DB[vigile].esenteCP()
 					and not self.DB[vigile].AltreCariche()
 					and "Aspettativa" not in self.DB[vigile].eccezioni
-					and not self.DB[vigile].neo_vigile
 					and len(self.DB[vigile].eccezioni) == 0
 					):
 					servizi_extra = round(self.DB[vigile].NumeroServizi() - media_servizi)
