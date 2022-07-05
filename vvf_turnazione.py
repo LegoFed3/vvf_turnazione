@@ -66,7 +66,7 @@ class TurnazioneVVF:
 	_NOTTI_ONEROSE = []
 
 	#Model
-	solver = pywraplp.Solver('Turnazione_VVF', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+	solver = pywraplp.Solver('Turnazione_VVF', pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING)
 	STATUS = -1
 
 	def _computeServiziSpecialiOnerosi(self):
@@ -163,6 +163,7 @@ class TurnazioneVVF:
 		### FASE 1 ###
 		print("* Fase 1: creo possibilità...")
 
+		zero_vars = []
 		while giorno < num_giorni:
 			for i in range(7):
 				curr_giorno = giorno + i
@@ -180,6 +181,8 @@ class TurnazioneVVF:
 						or loose)
 						):
 						self.var_notti[curr_giorno][vigile] = self.solver.IntVar(0, 1, "var_vigile({})_notte({})".format(vigile, curr_giorno))
+						if curr_squadra not in self.DB[vigile].squadre:
+							zero_vars.append(self.var_notti[curr_giorno][vigile])
 
 				#CONSTR: 1 vigile per notte
 				self.constr_notti[curr_giorno] = self.solver.Constraint(1, 1, "constr_notte({})".format(curr_giorno))
@@ -251,6 +254,10 @@ class TurnazioneVVF:
 
 			curr_squadra = (curr_squadra % num_squadre) + 1
 			giorno += 7
+
+		# Inizializza soluzione per notti fuori squadra a 0
+		if len(zero_vars) > 0:
+			self.solver.SetHint(zero_vars, [0]*len(zero_vars))
 
 		# Verifica numero di sabati e festivi
 		_LIST_FESTIVI = list(self.var_festivi_gruppo.keys())
