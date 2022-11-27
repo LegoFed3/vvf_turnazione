@@ -142,51 +142,42 @@ class Vigile:
 
 	def __str__(self):  # Called by print()
 		s = "{:03d} {}".format(self.id, self.grado)
-		if self.neoAssunto():
+		if self.neo_assunto():
 			s += "*"
 		return s + " {} {}".format(self.nome, self.cognome)
 
 	def __repr__(self):
 		return self.__str__()
 
-	def esenteServizi(self):
-		return (self.grado in ["Ispettore", "Presidente", "Complemento"]
-				or "Aspettativa" in self.eccezioni)
+	def esente_servizi(self):
+		return self.grado in ["Ispettore", "Presidente", "Complemento"] or "Aspettativa" in self.eccezioni
 
-	def esenteNotti(self):
-		return (self.esenteServizi()
-				or self.grado == "Aspirante"
-				or self.grado == "Complemento"
-				or "EsenteNotti" in self.eccezioni
-				or "Aspettativa" in self.eccezioni)
+	def esente_notti(self):
+		return (self.esente_servizi() or self.grado in ["Aspirante", "Complemento"] or "Aspettativa" in self.eccezioni
+				or "EsenteNotti" in self.eccezioni)
 
-	def esenteSabati(self):
-		return (self.esenteServizi()
-				or self.grado == "Aspirante"
-				or self.grado == "Complemento"
-				or "Aspettativa" in self.eccezioni
+	def esente_sabati(self):
+		return (self.esente_servizi() or self.grado in ["Aspirante", "Complemento"]or "Aspettativa" in self.eccezioni
 				or "EsenteSabati" in self.eccezioni)
 
-	def esenteFestivi(self):
-		return (self.esenteServizi()
-				or self.gruppo_festivo == 0
-				or "Aspettativa" in self.eccezioni)
+	def esente_festivi(self):
+		return self.esente_servizi() or self.gruppo_festivo == 0 or "Aspettativa" in self.eccezioni
 
-	def extraSabati(self):
+	def extra_sabati(self):
 		res = 0
 		for e in self.eccezioni:
 			if "ExtraSabati" in e:
 				res = max(res, int(e[len("ExtraSabati"):]))
 		return res
 
-	def extraNotti(self):
+	def extra_notti(self):
 		res = 0
 		for e in self.eccezioni:
 			if "ExtraNotti" in e:
 				res = max(res, int(e[len("ExtraNotti"):]))
 		return res
 
-	def neoAssunto(self):
+	def neo_assunto(self):
 		return "NeoAssunto" in self.eccezioni or "DaTrasferimento" in self.eccezioni
 
 	# def esenteCP(self):
@@ -195,14 +186,14 @@ class Vigile:
 	def graduato(self):
 		return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
 
-	def altreCariche(self):
+	def altre_cariche(self):
 		return ("Segretario" in self.eccezioni
 				or "Cassiere" in self.eccezioni
 				or "Magazziniere" in self.eccezioni
 				or "Vicemagazziniere" in self.eccezioni
 				or "Resp. Allievi" in self.eccezioni)
 
-	def offsetCompleanno(self, data_inizio):
+	def offset_compleanno(self, data_inizio):
 		if (
 				self.data_di_nascita.month <= data_inizio.month
 				and self.data_di_nascita.day < data_inizio.day
@@ -213,7 +204,7 @@ class Vigile:
 		offset = (compleanno - data_inizio).days
 		return offset
 
-	def numeroServizi(self):
+	def numero_servizi(self):
 		return self.notti + self.sabati + self.festivi
 
 
