@@ -1,5 +1,4 @@
-#ID;Nome;Cognome;Data di Nascita;Grado;Squadra;Gruppo Festivo;Data Passaggio A Vigile;Eccezioni;Note
-#Squadra 0 o GruppoFestivo 0 indicano esenzione, multiple eccezioni vanno nella stessa colonna separate da virgole;;;;;;;;;
+ID;Nome;Cognome;Data di Nascita;Grado;Squadra;Gruppo Festivo;Data Passaggio A Vigile;Eccezioni;Note
 1;N1;C1;06/08/1960;Vigile;1;1;;;Note:
 2;N2;C2;23/12/1961;Capoplotone;2;2;;;Note:
 3;N3;C3;08/04/1962;Vigile;3;3;;;Note:

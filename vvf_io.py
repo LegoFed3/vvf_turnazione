@@ -1,4 +1,5 @@
 import datetime as dt
+import pandas as pd
 import os
 
 _GRADI_VALIDI = [
@@ -11,7 +12,7 @@ _GRADI_VALIDI = [
 	"Complemento",
 	"Ispettore",
 	"Presidente",
-	]
+]
 
 _ECCEZZIONI_VALIDE = [
 	# Cariche
@@ -94,7 +95,8 @@ _ECCEZZIONI_VALIDE = [
 	"ExtraNotti8",
 	"ExtraSabati1",
 	"ExtraSabati2",
-	]
+]
+
 
 class Vigile:
 	id = 0
@@ -110,8 +112,8 @@ class Vigile:
 	festivi = 0
 	capodanno = 0
 	festivi_onerosi = 0
-	passato_festivi_onerosi = [0]*10
-	passato_sabati = [0]*10
+	passato_festivi_onerosi = [0] * 10
+	passato_sabati = [0] * 10
 	passato_servizi_extra = 0
 	passato_capodanni = 0
 	notti_base = 9.0
@@ -120,15 +122,15 @@ class Vigile:
 	mesi_da_vigile = 12
 	notti_non_standard = False
 
-	def __init__(self, *args):
-		self.id = int(args[0][0])
-		self.nome = args[0][1]
-		self.cognome = args[0][2]
-		self.data_di_nascita = dt.datetime.strptime(args[0][3], '%d/%m/%Y').date()
-		self.grado = args[0][4]
-		self.squadre = list(map(int, args[0][5].split(",")))
-		self.gruppo_festivo = int(args[0][6])
-		self.eccezioni = set(args[0][7].strip(" ").split(","))
+	def __init__(self, id_vigile, params):
+		self.id = id_vigile
+		self.nome = params[1]
+		self.cognome = params[2]
+		self.data_di_nascita = dt.datetime.strptime(params[3], '%d/%m/%Y').date()
+		self.grado = params[4]
+		self.squadre = list(map(int, params[5].split(",")))
+		self.gruppo_festivo = int(params[6])
+		self.eccezioni = set(params[7].strip(" ").split(","))
 		if '' in self.eccezioni:
 			self.eccezioni.remove('')
 
@@ -145,10 +147,13 @@ class Vigile:
 			if "ExtraNotti" in e:
 				self.notti_non_standard = True
 		if "Aspettativa" in self.eccezioni and self.gruppo_festivo != 0:
-			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}! Ignoro il gruppo festivo.".format(self.id, self.gruppo_festivo))
+			print(
+				"ATTENZIONE: il vigile {} è in aspettativa ma è assegnato al gruppo festivo {}! Ignoro il gruppo festivo.".format(
+					self.id, self.gruppo_festivo))
 			self.gruppo_festivo = 0
 		if "Aspettativa" in self.eccezioni and self.squadre != [0]:
-			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}! Ignoro la squadra.".format(self.id, self.squadre))
+			print("ATTENZIONE: il vigile {} è in aspettativa ma è assegnato alla squadra {}! Ignoro la squadra.".format(
+				self.id, self.squadre))
 			self.squadre = [0]
 
 		# Coefficienti notti e sabati
@@ -164,28 +169,28 @@ class Vigile:
 			self.notti_base = 7.0
 			self.notti_non_standard = True
 		if (
-			"Segretario" in self.eccezioni
-			or "Cassiere" in self.eccezioni
-			or "Magazziniere" in self.eccezioni
-			or "Vicemagazziniere" in self.eccezioni
-			or "Resp. Allievi" in self.eccezioni
-			):
+				"Segretario" in self.eccezioni
+				or "Cassiere" in self.eccezioni
+				or "Magazziniere" in self.eccezioni
+				or "Vicemagazziniere" in self.eccezioni
+				or "Resp. Allievi" in self.eccezioni
+		):
 			self.notti_base = min(self.notti_base, 5.0)
 			self.notti_non_standard = True
 		if "DaTrasferimento" in self.eccezioni or "NeoAssunto" in self.eccezioni:
 			self.notti_base = max(self.notti_base, 12.0)
 			self.notti_non_standard = True
 		# if "EsenteCP" in self.eccezioni:
-			# self.notti_base = max(self.notti_base, 15.0)
-			# self.notti_non_standard = True
+		# self.notti_base = max(self.notti_base, 15.0)
+		# self.notti_non_standard = True
 
 		self.coeff_notti = 9.0 / self.notti_base
 		if "LimiteNotti" in self.eccezioni:
-			self.coeff_notti = 0.01 # Ignora pesi, assegnale fino a questo limite
+			self.coeff_notti = 0.01  # Ignora pesi, assegnale fino a questo limite
 			self.notti_non_standard = True
-		self.coeff_sabati = 1.1 / self.sabati_base # Per favorire assegnazione stesso numero
+		self.coeff_sabati = 1.1 / self.sabati_base  # Per favorire assegnazione stesso numero
 
-	def __str__(self): # Called by print()
+	def __str__(self):  # Called by print()
 		s = "{:03d} {}".format(self.id, self.grado)
 		if self.neoAssunto():
 			s += "*"
@@ -196,27 +201,26 @@ class Vigile:
 
 	def esenteServizi(self):
 		return (self.grado in ["Ispettore", "Presidente", "Complemento"]
-			or "Aspettativa" in self.eccezioni)
+				or "Aspettativa" in self.eccezioni)
 
 	def esenteNotti(self):
 		return (self.esenteServizi()
-			or self.grado == "Aspirante"
-			or self.grado == "Complemento"
-			or "EsenteNotti" in self.eccezioni
-			or "Aspettativa" in self.eccezioni)
+				or self.grado == "Aspirante"
+				or self.grado == "Complemento"
+				or "EsenteNotti" in self.eccezioni
+				or "Aspettativa" in self.eccezioni)
 
 	def esenteSabati(self):
 		return (self.esenteServizi()
-			or self.grado == "Aspirante"
-			or self.grado == "Complemento"
-			or "Aspettativa" in self.eccezioni
-			or "EsenteSabati" in self.eccezioni)
+				or self.grado == "Aspirante"
+				or self.grado == "Complemento"
+				or "Aspettativa" in self.eccezioni
+				or "EsenteSabati" in self.eccezioni)
 
 	def esenteFestivi(self):
 		return (self.esenteServizi()
-			or self.gruppo_festivo == 0
-			or "Aspettativa" in self.eccezioni)
-
+				or self.gruppo_festivo == 0
+				or "Aspettativa" in self.eccezioni)
 
 	def extraSabati(self):
 		res = 0
@@ -236,23 +240,23 @@ class Vigile:
 		return "NeoAssunto" in self.eccezioni or "DaTrasferimento" in self.eccezioni
 
 	# def esenteCP(self):
-		# return "EsenteCP" in self.eccezioni
+	# return "EsenteCP" in self.eccezioni
 
 	def graduato(self):
 		return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
 
 	def altreCariche(self):
 		return ("Segretario" in self.eccezioni
-			or "Cassiere" in self.eccezioni
-			or "Magazziniere" in self.eccezioni
-			or "Vicemagazziniere" in self.eccezioni
-			or "Resp. Allievi" in self.eccezioni)
+				or "Cassiere" in self.eccezioni
+				or "Magazziniere" in self.eccezioni
+				or "Vicemagazziniere" in self.eccezioni
+				or "Resp. Allievi" in self.eccezioni)
 
 	def offsetCompleanno(self, data_inizio):
 		if (
-			self.data_di_nascita.month <= data_inizio.month
-			and self.data_di_nascita.day < data_inizio.day
-			):
+				self.data_di_nascita.month <= data_inizio.month
+				and self.data_di_nascita.day < data_inizio.day
+		):
 			compleanno = dt.date(data_inizio.year + 1, self.data_di_nascita.month, self.data_di_nascita.day)
 		else:
 			compleanno = dt.date(data_inizio.year, self.data_di_nascita.month, self.data_di_nascita.day)
@@ -262,41 +266,33 @@ class Vigile:
 	def numeroServizi(self):
 		return self.notti + self.sabati + self.festivi
 
+
 def read_csv_vigili(filename):
 	db = {}
 	if not os.path.isfile(filename):
-		print("ERRORE: il file '{}' che descrive i vigili non esiste!".format(filename))
+		print(f"ERRORE: il file '{filename}' che descrive i vigili non esiste!")
 		print("\tImpossibile continuare senza.")
 		exit(-1)
-	fi = open(filename, "r")
-	for line in fi:
-		if line[0] == "#":
+	df = pd.read_csv(filename, sep=";", dtype=str, keep_default_na=False, usecols=range(8))
+	for idx, row in df.iterrows():
+		if len(row) == 0:
 			continue
-		else:
-			line = line.strip("\n\r").split(";")
-			# line = list(filter(lambda x: x != '', line))
-			if len(line) > 0:
-				db[int(line[0])] = Vigile(line[0:])
-	fi.close()
+		id_vigile = int(row[0])
+		db[id_vigile] = Vigile(id_vigile, row.values)
 	return db
+
 
 def read_csv_riporti(db, filename):
 	if not os.path.isfile(filename):
-		print("ATTENZIONE: il file '{}' che descrive i riporti dello scorso anno non esiste!".format(filename))
+		print(f"ATTENZIONE: il file '{filename}' che descrive i riporti dello scorso anno non esiste!")
 		print("\tContinuo senza.")
 		return db
-	fi = open(filename, "r")
-	for line in fi:
-		if line[0] == "#":
-			continue
-		else:
-			line = line.strip("\n\r").split(";")
-			if len(line) > 0:
-				id = int(line[0])
-				if id in db.keys():
-					db[id].passato_servizi_extra = int(line[1])
-					db[id].passato_capodanni = int(line[2])
-					db[id].passato_sabati = list(map(lambda x: int(x), line[3:13]))
-					db[id].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:23]))
-	fi.close()
+	df = pd.read_csv(filename, sep=";")
+	for idx, row in df.iterrows():
+		id_vigile = row[0]
+		if id_vigile in db.keys():
+			db[id_vigile].passato_servizi_extra = int(row[1])
+			db[id_vigile].passato_capodanni = int(row[2])
+			db[id_vigile].passato_sabati = list(map(lambda x: int(x), row[3:13]))
+			db[id_vigile].passato_festivi_onerosi = list(map(lambda x: int(x), row[13:23]))
 	return db
