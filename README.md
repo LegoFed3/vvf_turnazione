@@ -3,11 +3,11 @@ Questo programma calcola la turnazione per i vigili del fuoco volontari, tenendo
 È basato su una formulazione di [programmazione lineare intera](https://it.wikipedia.org/wiki/Programmazione_lineare) (Integer Linear Programming, ILP).
 
 ## Prerequisiti
-Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.6) e si basa, per la soluzione di una formulazione ILP, su [Google OR Tools](https://developers.google.com/optimization) ed il solver GLOP da esso fornito.
+Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.6) e si basa, per la soluzione di una formulazione ILP, su [Google OR Tools](https://developers.google.com/optimization) ed il solver GLOP da esso fornito, oltre che sulla libreria [Pandas](https://pandas.pydata.org/).
 Su e.g. Ubuntu Linux (e distribuzioni analoghe) si possono installare con:
 ```
 sudo apt install python3
-python -m pip install --upgrade --user ortools
+python -m pip install --upgrade --user ortools pandas
 ```
 Mentre su Windows si vedano i link di cui sopra.
 
@@ -63,12 +63,12 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 			* EsenteCP: notti extra per compensare la non-reperibilità.
 			* EsenteNotti: nessun servizio notturno.
 			* EsenteSabati: nessun servizio sabato diurno.
-			* NottiSoloSabatoFestivi, NoNottiGiornoLun, NoNottiGiornoMar, NoNottiGiornoMer, NoNottiGiornoGio, NoNottiGiornoVen, NoNottiGiornoSab, NoNottiGiornoDom, NoNottiMese1, NoNottiMese2, NoNottiMese3, NoNottiMese4, NoNottiMese5, NoNottiMese6, NoNottiMese7, NoNottiMese8, NoNottiMese9, NoNottiMese10, NoNottiMese11, NoNottiMese12: limiti ai giorni per i quali è possibile assegnare notti al vigile.
-			* NoServiziMese1, NoServiziMese2, NoServiziMese3, NoServiziMese4, NoServiziMese5, NoServiziMese6, NoServiziMese7, NoServiziMese8, NoServiziMese9, NoServiziMese10, NoServiziMese11, NoServiziMese12, FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.
+			* NottiSoloSabatoFestivi, NoNottiGiorno\[Lun,Mar,Mer,Gio,Ven,Sab,Dom\], NoNottiMese\[1-12\]: limiti ai giorni per i quali è possibile assegnare notti al vigile.
+			* NoServiziMese\[1-12\], FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.
 			* NottiAncheFuoriSettimana: consente di assegnare notti anche fuori dalla settimana di reperibilità al vigile (versione individuale di -l).
-			* LimiteNotti1, LimiteNotti2, LimiteNotti3, LimiteNotti4, LimiteNotti5, LimiteNotti6, LimiteNotti7, LimiteNotti8, LimiteNotti9, LimiteNotti10: limite specifico al numero di notti assegnabili; sovrascrive il limite per carica.
-			* "ExtraNotti1", "ExtraNotti2", "ExtraNotti3", "ExtraNotti4", "ExtraNotti5", "ExtraNotti6", "ExtraNotti7", "ExtraNotti8": aggiunge esattamente il numero di notti indicato, richiede -m
-			*  "ExtraSabati1", "ExtraSabati2": aggiunge esattamente il numero di sabati indicato
+			* LimiteNotti\[1-12\]: limite specifico al numero di notti assegnabili; sovrascrive il limite per carica.
+			* ExtraNotti\[1-12\]:: aggiunge esattamente il numero di notti indicato, richiede -m
+			*  ExtraSabati\[1-12\]: aggiunge esattamente il numero di sabati indicato
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.
