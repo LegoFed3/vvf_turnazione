@@ -588,6 +588,9 @@ class TurnazioneVVF:
 		if verbose:
 			self.solver.EnableOutput()
 		self.solver.SetNumThreads(num_threads)
+		gap = 0.00001
+		solverParams = pywraplp.MPSolverParameters()
+		solverParams.SetDoubleParam(solverParams.RELATIVE_MIP_GAP, gap)
 		if time_limit > 0:
 			self.solver.SetTimeLimit(time_limit * 1000) #ms
 		print("* Risolvo il modello... (max {}s)".format(time_limit if time_limit > 0 else "∞"))
