@@ -137,3 +137,5 @@ organico_*.csv
 run.sh
 run.bat
 log
+log.txt
+.idea/
