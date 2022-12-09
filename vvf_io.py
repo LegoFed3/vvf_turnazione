@@ -68,6 +68,8 @@ class Vigile:
     delta_festivi = 0
     notti_non_standard = False
     coeff_notti = 1.0
+    coeff_sabati = 1.0
+    coeff_festivi = 1.0
 
     def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, squadre, dn, ds, df, eccezzioni):
         self.id = id_vigile
@@ -107,7 +109,9 @@ class Vigile:
         if self.delta_notti != 0:
             self.notti_non_standard = True
         if grado in ["Comandante", "Vicecomandante"]:
-            self.coeff_notti = 2.0
+            self.coeff_notti = 0.5
+            self.coeff_sabati = 0.5
+            self.coeff_festivi = 0.5
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
