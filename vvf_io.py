@@ -21,12 +21,8 @@ _ECCEZZIONI_VALIDE = [
     "Magazziniere",
     "Vicemagazziniere",
     "Resp. Allievi",
-    # Neo-assunti
-    "NeoAssunto",
-    "DaTrasferimento",
     # Esenzioni
     "Aspettativa",
-    # "EsenteCP",
     "EsenteNotti",
     "EsenteSabati",
     "EsenteFestivi",
@@ -45,7 +41,7 @@ _ECCEZZIONI_VALIDE = [
 for i in range(1, 12 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoNottiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoServiziMese{i}")
-    _ECCEZZIONI_VALIDE.append(f"LimiteNotti{i}")
+    # _ECCEZZIONI_VALIDE.append(f"LimiteNotti{i}")
     # _ECCEZZIONI_VALIDE.append(f"ExtraNotti{i}")
     # _ECCEZZIONI_VALIDE.append(f"ExtraSabati{i}")
 
@@ -67,12 +63,13 @@ class Vigile:
     passato_sabati = [0] * 10
     passato_servizi_extra = 0
     passato_capodanni = 0
-    notti_base = 9.0
-    sabati_base = 1.0
-    mesi_da_vigile = 12
+    delta_notti = 0
+    delta_sabati = 0
+    delta_festivi = 0
     notti_non_standard = False
+    coeff_notti = 1.0
 
-    def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, squadre, eccezzioni):
+    def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, squadre, dn, ds, df, eccezzioni):
         self.id = id_vigile
         self.nome = nome
         self.cognome = cognome
@@ -83,6 +80,12 @@ class Vigile:
             self.squadre = list(map(int, squadre.split(",")))
         else:
             self.squadre = [0]
+        if len(dn) > 0:
+            self.delta_notti = int(dn)
+        if len(ds) > 0:
+            self.delta_sabati = int(ds)
+        if len(df) > 0:
+            self.delta_festivi = int(df)
         self.eccezioni = set(eccezzioni.strip(" ").split(","))
         if '' in self.eccezioni:
             self.eccezioni.remove('')
@@ -97,43 +100,14 @@ class Vigile:
             if e not in _ECCEZZIONI_VALIDE:
                 print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
                 exit(-1)
-            if "ExtraNotti" in e:
-                self.notti_non_standard = True
         if "Aspettativa" in self.eccezioni and self.squadre != [0]:
             print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")
             self.squadre = [0]
-
-        # Coefficienti notti e sabati
-        if self.grado == "Comandante":
-            self.notti_base = 3.0
-            self.sabati_base = 0.5
+        if self.delta_notti != 0:
             self.notti_non_standard = True
-        elif self.grado == "Vicecomandante":
-            self.notti_base = 4.0
-            self.sabati_base = 0.5
-            self.notti_non_standard = True
-        elif self.grado in ["Capoplotone", "Caposquadra"]:
-            self.notti_base = 7.0
-            self.notti_non_standard = True
-        if (
-                "Segretario" in self.eccezioni
-                or "Cassiere" in self.eccezioni
-                or "Magazziniere" in self.eccezioni
-                or "Vicemagazziniere" in self.eccezioni
-                or "Resp. Allievi" in self.eccezioni
-        ):
-            self.notti_base = min(self.notti_base, 5.0)
-            self.notti_non_standard = True
-        if "DaTrasferimento" in self.eccezioni or "NeoAssunto" in self.eccezioni:
-            self.notti_base = max(self.notti_base, 12.0)
-            self.notti_non_standard = True
-
-        self.coeff_notti = 9.0 / self.notti_base
-        if "LimiteNotti" in self.eccezioni:
-            self.coeff_notti = 0.01  # Ignora pesi, assegnale fino a questo limite
-            self.notti_non_standard = True
-        self.coeff_sabati = 1.1 / self.sabati_base  # Per favorire assegnazione stesso numero
+        if grado in ["Comandante", "Vicecomandante"]:
+            self.coeff_notti = 2.0
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
@@ -158,20 +132,6 @@ class Vigile:
 
     def esente_festivi(self):
         return self.esente_servizi() or "Aspettativa" in self.eccezioni or "EsenteFestivi" in self.eccezioni
-
-    def extra_sabati(self):
-        res = 0
-        for e in self.eccezioni:
-            if "ExtraSabati" in e:
-                res = max(res, int(e[len("ExtraSabati"):]))
-        return res
-
-    def extra_notti(self):
-        res = 0
-        for e in self.eccezioni:
-            if "ExtraNotti" in e:
-                res = max(res, int(e[len("ExtraNotti"):]))
-        return res
 
     def neo_assunto(self):
         return "NeoAssunto" in self.eccezioni or "DaTrasferimento" in self.eccezioni
@@ -220,6 +180,9 @@ def read_csv_vigili(filename):
             row['Grado'],
             row['Autista'],
             row['Squadra'],
+            row['DeltaNotti'],
+            row['DeltaSabati'],
+            row['DeltaFestivi'],
             row['Eccezioni'],
         )
     return db

@@ -190,7 +190,7 @@ class TurnazioneVVF:
             c_notti_settimana_vigile = {}
             for vigile in self.var_notti[giorno]:  # curr_giorno?
                 max_notti_settimana = 1
-                if self.DB[vigile].extra_notti() > 0:
+                if self.DB[vigile].delta_notti > 0:
                     max_notti_settimana = 2
                 lim_giorni = len([e for e in self.DB[vigile].eccezioni if "NoNottiGiorno" in e])
                 lim_mesi = len([e for e in self.DB[vigile].eccezioni if "NoNottiMese" in e])
@@ -232,7 +232,7 @@ class TurnazioneVVF:
         print(f"\tCon {len(_LIST_PERS_FESTIVO)} persone che svolgono festivi "
               f"assegnerò {_NUM_MIN_FESTIVI}-{_NUM_MAX_FESTIVI} servizi festivi a testa.")
 
-        sabati_extra_tot = sum([v.extra_sabati() for v in self.DB.values()])
+        sabati_extra_tot = sum([v.delta_sabati for v in self.DB.values()])
         _NUM_MIN_SABATI = 0
         _NUM_MAX_SABATI = 1
         if num_vigili_per_sabati + sabati_extra_tot < num_sabati:
@@ -257,7 +257,7 @@ class TurnazioneVVF:
                     notti_attese = math.floor(notti_attese)
                 elif notti_attese > num_medio_notti:
                     notti_attese = math.ceil(notti_attese)
-                notti_attese += self.DB[vigile].extra_notti()
+                notti_attese += self.DB[vigile].delta_notti
                 notti_attese = int(notti_attese)
                 if self.DB[vigile].notti_non_standard and notti_attese >= num_medio_notti:
                     print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, più della media ~{num_medio_notti}.")
@@ -284,7 +284,7 @@ class TurnazioneVVF:
 
             # Sabati
             if not self.DB[vigile].esente_sabati():
-                sabati_extra = self.DB[vigile].extra_sabati()
+                sabati_extra = self.DB[vigile].delta_sabati
 
                 # CONSTR: max 1 sabato, se possibile
                 if sabati_extra > 0:
@@ -511,7 +511,7 @@ class TurnazioneVVF:
                     if vigile in self.var_notti[giorno]:
                         if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
                             mul_notte_squadra = 10  # Notti NON di squadra costano di più
-                            if self.DB[vigile].extra_notti() > 0 \
+                            if self.DB[vigile].delta_notti > 0 \
                                     or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
                                 mul_notte_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
                         c.SetCoefficient(self.var_notti[giorno][vigile],
@@ -688,7 +688,7 @@ class TurnazioneVVF:
                         servizi_extra = round(self.DB[vigile].numero_servizi() - media_servizi)
                     line += f"{servizi_extra};"
                     line += f"{self.DB[vigile].passato_capodanni + self.DB[vigile].capodanno};"
-                    line += f"{self.DB[vigile].sabati - self.DB[vigile].extra_sabati()};"
+                    line += f"{self.DB[vigile].sabati - self.DB[vigile].delta_sabati};"
                     for sabati in self.DB[vigile].passato_sabati[0:9]:
                         line += f"{sabati};"
                     line += f"{self.DB[vigile].festivi_onerosi};"
