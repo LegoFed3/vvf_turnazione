@@ -55,8 +55,11 @@ class Vigile:
     squadre = []
     eccezioni = set()
     notti = 0
+    notti_fuori_squadra = 0
     sabati = 0
+    sabati_fuori_squadra = 0
     festivi = 0
+    festivi_fuori_squadra = 0
     capodanno = 0
     festivi_onerosi = 0
     passato_festivi_onerosi = [0] * 10
@@ -115,9 +118,7 @@ class Vigile:
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
-        if self.neo_assunto():
-            s += "*"
-        return s + " {} {}".format(self.nome, self.cognome)
+        return s + f" {self.nome} {self.cognome}"
 
     def __repr__(self):
         return self.__str__()
@@ -137,9 +138,6 @@ class Vigile:
     def esente_festivi(self):
         return self.esente_servizi() or "Aspettativa" in self.eccezioni or "EsenteFestivi" in self.eccezioni
 
-    def neo_assunto(self):
-        return "NeoAssunto" in self.eccezioni or "DaTrasferimento" in self.eccezioni
-
     def graduato(self):
         return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
 
@@ -149,6 +147,13 @@ class Vigile:
                 or "Magazziniere" in self.eccezioni
                 or "Vicemagazziniere" in self.eccezioni
                 or "Resp. Allievi" in self.eccezioni)
+
+    def membro_direttivo(self):
+        return (self.grado in ["Comandante", "Vicecomandante", "Caposquadra"]
+                or "Segretario" in self.eccezioni
+                or "Cassiere" in self.eccezioni
+                or "Magazziniere" in self.eccezioni
+                or "Vicemagazziniere" in self.eccezioni)
 
     def offset_compleanno(self, data_inizio):
         if (

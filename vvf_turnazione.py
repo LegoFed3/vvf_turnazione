@@ -238,7 +238,7 @@ class TurnazioneVVF:
             media_sabati = num_sabati / num_vigili_per_sabati
             _NUM_MIN_SABATI = math.floor(media_sabati)
             _NUM_MAX_SABATI = math.ceil(media_sabati)
-            print(f"ATTENZIONE: {num_vigili_per_sabati} vigili (+{sabati_extra_tot} sabati extra) insufficienti per "
+            print(f"ATTENZIONE: {num_vigili_per_sabati} vigili (+{sabati_extra_tot} extra) insufficienti per "
                   f"coprire {num_sabati} sabati con un solo servizio a testa. Ne "
                   f"assegnerò {_NUM_MIN_SABATI}-{_NUM_MAX_SABATI}.")
 
@@ -282,14 +282,11 @@ class TurnazioneVVF:
 
             # Sabati
             if not self.DB[vigile].esente_sabati():
-                sabati_extra = self.DB[vigile].delta_sabati
 
-                # # CONSTR: max 1 sabato, se possibile
-                if sabati_extra > 0:
-                    c = self.solver.Constraint(_NUM_MAX_SABATI + sabati_extra, _NUM_MAX_SABATI + sabati_extra,
-                                               f"constr_sabati_vigile({vigile})")
-                else:
-                    c = self.solver.Constraint(_NUM_MIN_SABATI, _NUM_MAX_SABATI, f"constr_sabati_vigile({vigile})")
+                # CONSTR: max 1 sabato, se possibile
+                sabati_extra = self.DB[vigile].delta_sabati
+                c = self.solver.Constraint(_NUM_MIN_SABATI + sabati_extra, _NUM_MAX_SABATI + sabati_extra,
+                                           f"constr_sabati_vigile({vigile})")
                 for sabato in self.var_sabati:
                     if vigile in self.var_sabati[sabato]:
                         c.SetCoefficient(self.var_sabati[sabato][vigile], 1)
@@ -342,7 +339,7 @@ class TurnazioneVVF:
                     if vigile in self.var_notti[giorno_prima]:
                         c.SetCoefficient(self.var_notti[giorno_prima][vigile], 1)
 
-            # CONSTR: max 1 notte in 3 giorni consecutivi
+            # CONSTR: max 1 notte in 4 giorni consecutivi
             for notte in self.var_notti:
                 if vigile in self.var_notti[notte]:
                     c = self.solver.Constraint(-self.solver.infinity(), 1,
@@ -468,7 +465,7 @@ class TurnazioneVVF:
                 mul_sabati = 1 + sum(self.DB[vigile].passato_sabati)  # Sabati più probabili se pochi in anni recenti
                 compleanno = self.DB[vigile].offset_compleanno(self.data_inizio)
                 for giorno in range(len(self.var_notti)):
-                    mul_notte_squadra = 1
+                    mul_squadra = 1
                     mul_bday = 1
                     pen_notti_onerose = 0
                     pen_festivi_onerosi = 0
@@ -477,27 +474,28 @@ class TurnazioneVVF:
                     if giorno in self._NOTTI_ONEROSE:
                         pen_notti_onerose = 1
                     if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
-                        pen_notti_onerose += 1000 * self.DB[vigile].passato_capodanni
+                        pen_notti_onerose += 100 * self.DB[vigile].passato_capodanni
                     if giorno in self._FESTIVI_ONEROSI:
                         pen_festivi_onerosi = 2 + sum(self.DB[vigile].passato_festivi_onerosi)
-                    if vigile in self.var_notti[giorno]:
-                        if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
-                            mul_notte_squadra = 2  # Notti NON di squadra costano di più
-                            if self.DB[vigile].delta_notti > 0 \
-                                    or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
-                                mul_notte_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
-                        c.SetCoefficient(self.var_notti[giorno][vigile],
-                                         1 * mul_bday * mul_notte_squadra * 1/self.DB[vigile].coeff_notti
-                                         + pen_notti_onerose)
+                    if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
+                        mul_squadra = 2  # Servizi NON di squadra costano di più
                     if giorno in self.var_sabati:
                         if vigile in self.var_sabati[giorno]:
-                            c.SetCoefficient(self.var_sabati[giorno][vigile], 2 * mul_bday * mul_sabati
+                            c.SetCoefficient(self.var_sabati[giorno][vigile], 2 * mul_bday * mul_squadra * mul_sabati
                                              * 1/self.DB[vigile].coeff_sabati)
                     if giorno in self.var_festivi:
                         if vigile in self.var_festivi[giorno]:
                             # Base 1.5 per incoraggiare massima equità
                             c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                             1.5 * mul_bday * 1/self.DB[vigile].coeff_festivi + pen_festivi_onerosi)
+                                             1.5 * mul_bday * mul_squadra * 1/self.DB[vigile].coeff_festivi
+                                             + pen_festivi_onerosi)
+                    if vigile in self.var_notti[giorno]:
+                        if mul_squadra > 1 and self.DB[vigile].delta_notti > 0 \
+                                or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
+                            mul_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
+                        c.SetCoefficient(self.var_notti[giorno][vigile],
+                                         1 * mul_bday * mul_squadra * 1/self.DB[vigile].coeff_notti
+                                         + pen_notti_onerose)
 
         for i in range(len(self.vigili)):
             v1 = self.vigili[i]
@@ -513,17 +511,17 @@ class TurnazioneVVF:
                         c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
                                                         f"constr_diff_servizi_plus_vigili({v1},{v2})")
                         c_plus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-                        # c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
-                        c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
-                        # c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
-                        c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
+                        c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
+                        # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
+                        c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
+                        # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
                         c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
                                                          f"constr_diff_servizi_minus_vigili({v1},{v2})")
                         c_minus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-                        # c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
-                        c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
-                        # c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
-                        c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
+                        c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
+                        # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
+                        c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
+                        # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
 
         print("* Fase 3: definisco l'obiettivo...")
 
@@ -573,20 +571,28 @@ class TurnazioneVVF:
                         self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())
                         if giorno == self._NOTTI_ONEROSE[2] and self.var_notti[giorno][vigile].solution_value() == 1:
                             self.DB[vigile].capodanno += 1
+                        if self.giorno_squadra[giorno] not in self.DB[vigile].squadre:
+                            self.DB[vigile].notti_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
                 for giorno in self.var_sabati:
                     if vigile in self.var_sabati[giorno]:
                         self.DB[vigile].sabati += int(self.var_sabati[giorno][vigile].solution_value())
+                        if self.giorno_squadra[giorno] not in self.DB[vigile].squadre:
+                            self.DB[vigile].sabati_fuori_squadra += \
+                                int(self.var_sabati[giorno][vigile].solution_value())
                 for giorno in self.var_festivi:
                     if vigile in self.var_festivi[giorno]:
                         self.DB[vigile].festivi += int(self.var_festivi[giorno][vigile].solution_value())
                         if giorno in self._FESTIVI_ONEROSI \
                                 and self.var_festivi[giorno][vigile].solution_value() == 1:
                             self.DB[vigile].festivi_onerosi += 1
+                        if self.giorno_squadra[giorno] not in self.DB[vigile].squadre:
+                            self.DB[vigile].festivi_fuori_squadra += \
+                                int(self.var_festivi[giorno][vigile].solution_value())
                 line = str(self.DB[vigile])
                 line += f": {self.DB[vigile].notti + self.DB[vigile].sabati + self.DB[vigile].festivi}"
-                line += f"\n\tNotti: {self.DB[vigile].notti}"
-                line += f"\n\tSabati: {self.DB[vigile].sabati}"
-                line += f"\n\tFestivi: {self.DB[vigile].festivi}"
+                line += f"\n\tNotti: {self.DB[vigile].notti} ({self.DB[vigile].notti_fuori_squadra})"
+                line += f"\n\tSabati: {self.DB[vigile].sabati} ({self.DB[vigile].sabati_fuori_squadra})"
+                line += f"\n\tFestivi: {self.DB[vigile].festivi} ({self.DB[vigile].festivi_fuori_squadra})"
                 if len(self.DB[vigile].eccezioni) > 0:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
                 print(line)
