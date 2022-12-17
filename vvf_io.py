@@ -40,6 +40,7 @@ _ECCEZZIONI_VALIDE = [
 ]
 for i in range(1, 12 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoNottiMese{i}")
+    _ECCEZZIONI_VALIDE.append(f"NoSabatiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoFestiviMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoServiziMese{i}")
     # _ECCEZZIONI_VALIDE.append(f"LimiteNotti{i}")
