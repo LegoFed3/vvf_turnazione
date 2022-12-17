@@ -605,6 +605,7 @@ class TurnazioneVVF:
         else:
             if self.STATUS == pywraplp.Solver.FEASIBLE:
                 print("ATTENZIONE: la soluzione trovata potrebbe non essere ottimale.")
+            servizi_fuori_squadra = 0
             print('* Soluzione:')
             print('Funzione obiettivo: ', self.solver.Objective().Value())
             print('Servizi per vigile:')
@@ -616,12 +617,14 @@ class TurnazioneVVF:
                             self.DB[vigile].capodanno += 1
                         if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             self.DB[vigile].notti_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
+                            servizi_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
                 for giorno in self.var_sabati:
                     if vigile in self.var_sabati[giorno]:
                         self.DB[vigile].sabati += int(self.var_sabati[giorno][vigile].solution_value())
                         if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             self.DB[vigile].sabati_fuori_squadra += \
                                 int(self.var_sabati[giorno][vigile].solution_value())
+                            servizi_fuori_squadra +=  int(self.var_sabati[giorno][vigile].solution_value())
                 for giorno in self.var_festivi:
                     if vigile in self.var_festivi[giorno]:
                         self.DB[vigile].festivi += int(self.var_festivi[giorno][vigile].solution_value())
@@ -631,6 +634,7 @@ class TurnazioneVVF:
                         if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             self.DB[vigile].festivi_fuori_squadra += \
                                 int(self.var_festivi[giorno][vigile].solution_value())
+                            servizi_fuori_squadra += int(self.var_festivi[giorno][vigile].solution_value())
                 line = str(self.DB[vigile])
                 line += f": {self.DB[vigile].notti + self.DB[vigile].sabati + self.DB[vigile].festivi}"
                 line += f"\n\tNotti: {self.DB[vigile].notti} ({self.DB[vigile].notti_fuori_squadra})"
@@ -639,6 +643,7 @@ class TurnazioneVVF:
                 if len(self.DB[vigile].eccezioni) > 0:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
                 print(line)
+            print(f"Totale servizi assegnti fuori dalla squadra: {servizi_fuori_squadra}")
 
     def save_solution(self):
         if not self._printed_solution:
