@@ -71,7 +71,6 @@ class Vigile:
     delta_notti = 0
     delta_sabati = 0
     delta_festivi = 0
-    notti_non_standard = False
 
     def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, squadre, dn, ds, df, eccezzioni):
         self.id = id_vigile
@@ -108,8 +107,6 @@ class Vigile:
             print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")
             self.squadre = [0]
-        if self.delta_notti != 0:
-            self.notti_non_standard = True
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
