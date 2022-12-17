@@ -252,6 +252,8 @@ class TurnazioneVVF:
         print(f"\tCon {len(pers_festivo)} vigili che svolgono festivi "
               f"assegnerò {_NUM_MIN_FESTIVI}-{_NUM_MAX_FESTIVI} servizi festivi a testa.")
 
+        self._SERVIZI_MINIMI = _NUM_MIN_NOTTI + _NUM_MIN_SABATI + _NUM_MIN_FESTIVI
+
         print("* Fase 2: aggiungo vincoli...")
 
         for vigile in self.vigili:
@@ -629,7 +631,7 @@ class TurnazioneVVF:
                 if len(self.DB[vigile].eccezioni) > 0:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
                 print(line)
-            print(f"Totale servizi assegnti fuori dalla squadra: {servizi_fuori_squadra}")
+            print(f"Totale servizi assegnati fuori dalla squadra: {servizi_fuori_squadra}")
 
     def save_solution(self):
         if not self._printed_solution:
@@ -680,29 +682,6 @@ class TurnazioneVVF:
                         out.write("- " + srv + "\n")
                     out.write("\n")
 
-            # Calcola il numero medio di servizi svolti dai vigili senza vincoli
-            s = 0
-            i = 0
-            for vigile in self.vigili:
-                if (
-                        self.DB[vigile].grado == "Vigile"  # Escludi altri gradi che hanno limitazioni
-                        and not self.DB[vigile].esente_servizi()
-                        and not self.DB[vigile].altre_cariche()  # Hanno meno servizi
-                        and "Aspettativa" not in self.DB[vigile].eccezioni
-                ):
-                    s += self.DB[vigile].numero_servizi()
-                    i += 1
-            media_servizi = float(s) / i
-            # # print("Media servizi per vigile: ", media_servizi)
-            # s = 0
-            # i = 0
-            # for vigile in self.vigili:
-            #     if not self.DB[vigile].notti_non_standard and self.DB[vigile].notti > 0:
-            #         s += self.DB[vigile].notti
-            #         i += 1
-            # media_notti = float(s) / i
-            # print(f"Media servizi notturni per vigile senza vincoli aggiuntivi ({i}): {media_notti}")
-
             # Riporta il numero di servizi extra ed i servizi speciali
             with open(f"./riporti_{self.anno}.csv", "w") as out:
                 out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;;;;;;Festivi Onerosi\n")
@@ -710,13 +689,14 @@ class TurnazioneVVF:
                     line = f"{vigile};"
                     servizi_extra = 0
                     if (
-                            self.DB[vigile].grado == "Vigile"
-                            # and not self.DB[vigile].esenteCP()
-                            and not self.DB[vigile].altre_cariche()
-                            and "Aspettativa" not in self.DB[vigile].eccezioni
-                            and len(self.DB[vigile].eccezioni) == 0
+                            not self.DB[vigile].esente_notti()
+                            and self.DB[vigile].esente_sabati()
+                            and self.DB[vigile].esente_festivi()
+                            and self.DB[vigile].delta_notti == 0
+                            and self.DB[vigile].delta_sabati == 0
+                            and self.DB[vigile].delta_festivi == 0
                     ):
-                        servizi_extra = round(self.DB[vigile].numero_servizi() - media_servizi)
+                        servizi_extra = round(self.DB[vigile].numero_servizi() - self._SERVIZI_MINIMI)
                     line += f"{servizi_extra};"
                     line += f"{self.DB[vigile].passato_capodanni + self.DB[vigile].capodanno};"
                     line += f"{self.DB[vigile].sabati - self.DB[vigile].delta_sabati};"
