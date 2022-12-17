@@ -415,6 +415,15 @@ class TurnazioneVVF:
                             if vigile in self.var_notti[giorno]:
                                 c.SetCoefficient(self.var_notti[giorno][vigile], 1)
 
+                # CONSTR_EX: no festivi specifico mese
+                mesi_da_saltare = [int(e[len("NoFestiviMese"):]) for e in self.DB[vigile].eccezioni if "NoFestiviMese" in e]
+                if len(mesi_da_saltare) > 0:
+                    c = self.solver.Constraint(-self.solver.infinity(), 0, f"constr_ex_no_festivi_mese({vigile})")
+                    for giorno in self.var_festivi:
+                        if self._get_date_from_offset(giorno).month in mesi_da_saltare:
+                            if vigile in self.var_festivi[giorno]:
+                                c.SetCoefficient(self.var_festivi[giorno][vigile], 1)
+
                 # CONSTR_EX: no servizi specifico mese
                 mesi_da_saltare = [int(e[len("NoServiziMese"):]) for e in self.DB[vigile].eccezioni if
                                    "NoServiziMese" in e]

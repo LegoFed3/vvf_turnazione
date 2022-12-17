@@ -65,6 +65,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 			* EsenteSabati: nessun servizio sabato diurno.
 			* EsenteFestivi: nessun servizio festivo diurno.
 			* NottiSoloSabatoFestivi, NoNottiGiorno\[Lun,Mar,Mer,Gio,Ven,Sab,Dom\], NoNottiMese\[1-12\]: limiti ai giorni per i quali è possibile assegnare notti al vigile.
+            * NoFestiviMese\[1-12\]: limiti ai giorni per i quali è possibile assegnare festivi al vigile.
 			* NoServiziMese\[1-12\], FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.
 			* NottiAncheFuoriSettimana: consente di assegnare notti anche fuori dalla settimana di reperibilità al vigile (versione individuale di -l).
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
