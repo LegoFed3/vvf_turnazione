@@ -71,9 +71,6 @@ class Vigile:
     delta_sabati = 0
     delta_festivi = 0
     notti_non_standard = False
-    coeff_notti = 1.0
-    coeff_sabati = 1.0
-    coeff_festivi = 1.0
 
     def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, squadre, dn, ds, df, eccezzioni):
         self.id = id_vigile
@@ -112,10 +109,6 @@ class Vigile:
             self.squadre = [0]
         if self.delta_notti != 0:
             self.notti_non_standard = True
-        if grado in ["Comandante", "Vicecomandante"]:
-            self.coeff_notti = 0.5
-            self.coeff_sabati = 0.5
-            self.coeff_festivi = 0.5
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
@@ -155,6 +148,9 @@ class Vigile:
                 or "Cassiere" in self.eccezioni
                 or "Magazziniere" in self.eccezioni
                 or "Vicemagazziniere" in self.eccezioni)
+
+    def haSquadra(self):
+        return 0 not in self.squadre
 
     def offset_compleanno(self, data_inizio):
         if (
