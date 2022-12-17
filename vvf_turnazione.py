@@ -595,7 +595,7 @@ class TurnazioneVVF:
         if time_limit > 0:
             self.solver.SetTimeLimit(time_limit * 1000)  # ms
         print("* Risolvo il modello... (max {}s)".format(time_limit if time_limit > 0 else "∞"))
-        self.STATUS = self.solver.Solve()
+        self.STATUS = self.solver.Solve(solver_params)
 
     def print_solution(self):
         self._printed_solution = True
