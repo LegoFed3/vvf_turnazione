@@ -656,7 +656,7 @@ class TurnazioneVVF:
                     if giorno in self.var_sabati:
                         frag = ""
                         for vigile in self.vigili:
-                            if not self.DB[vigile].esente_sabati() \
+                            if vigile in self.var_sabati[giorno] \
                                     and self.var_sabati[giorno][vigile].solution_value() == 1:
                                 frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
                                 servizi_per_vigile[vigile].append((str(data) + " sabato"))
@@ -665,10 +665,10 @@ class TurnazioneVVF:
                     elif giorno in self.var_festivi:
                         frag = ""
                         for vigile in self.vigili:
-                            if vigile in self.var_festivi[giorno]:
-                                if self.var_festivi[giorno][vigile].solution_value() == 1:
-                                    frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                                    servizi_per_vigile[vigile].append((str(data) + " festivo"))
+                            if vigile in self.var_festivi[giorno] \
+                                    and self.var_festivi[giorno][vigile].solution_value() == 1:
+                                frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                                servizi_per_vigile[vigile].append((str(data) + " festivo"))
                         line += frag
                         line += ";" * (5 - len(frag.split(";")))
                     else:
