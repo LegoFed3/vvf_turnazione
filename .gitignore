@@ -132,6 +132,7 @@ dmypy.json
 model.txt
 out
 turni_*.csv
+turni_*.txt
 riporti_*.csv
 organico_*.csv
 run.sh

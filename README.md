@@ -76,6 +76,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Servizi Onerosi*: 5 colonne indicanti il numero di servizi onerosi assegnati nei 5 anni precedenti.
 
 ## Output
-Il programma produce due file:
+Il programma produce tre file:
 * *turni_&lt;anno&gt;.csv*: contiene la turnistica calcolata; per ogni data è indicato il vigile assegnato al relativo notturno, e per sabati ed i festivi i vigili assegnati ai medesimi.
+* *turni_per_vigile_&lt;anno&gt;.txt*: contiene la turnistica calcolata organizzata come lista servizi per ogni vigile.
 * *riporti_&lt;anno&gt;.csv*: file dei riporti (aggiornato) da utilizzare per il calcolo l'anno successivo.

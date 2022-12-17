@@ -624,6 +624,9 @@ class TurnazioneVVF:
         else:
             # Salva i turni calcolati in un CSV
             print("Salvo la soluzione...")
+            servizi_per_vigile = {}
+            for vigile in self.DB:
+                servizi_per_vigile[vigile] = []
             with open(f"./turni_{self.anno}.csv", "w") as out:
                 out.write("#Data;Notte;Sabato/Festivo;;;;;Affiancamento\n")
                 for giorno in range(len(self.var_notti)):
@@ -632,12 +635,14 @@ class TurnazioneVVF:
                     for vigile in self.var_notti[giorno]:
                         if self.var_notti[giorno][vigile].solution_value() == 1:
                             line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                            servizi_per_vigile[vigile].append((str(data) + " notte"))
                     if giorno in self.var_sabati:
                         frag = ""
                         for vigile in self.vigili:
                             if not self.DB[vigile].esente_sabati() \
                                     and self.var_sabati[giorno][vigile].solution_value() == 1:
                                 frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                                servizi_per_vigile[vigile].append((str(data) + " sabato"))
                         line += frag
                         line += ";" * (5 - len(frag.split(";")))
                     elif giorno in self.var_festivi:
@@ -646,11 +651,19 @@ class TurnazioneVVF:
                             if vigile in self.var_festivi[giorno]:
                                 if self.var_festivi[giorno][vigile].solution_value() == 1:
                                     frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                                    servizi_per_vigile[vigile].append((str(data) + " festivo"))
                         line += frag
                         line += ";" * (5 - len(frag.split(";")))
                     else:
                         line += ";;;;;"
                     out.write(line + "\n")
+
+            with open(f"./turni_per_vigile_{self.anno}.txt", "w") as out:
+                for vigile in self.DB:
+                    out.write(self.DB[vigile].nome + " " + self.DB[vigile].cognome + ":\n")
+                    for srv in servizi_per_vigile[vigile]:
+                        out.write("- " + srv + "\n")
+                    out.write("\n")
 
             # Calcola il numero medio di servizi svolti dai vigili senza vincoli
             s = 0
