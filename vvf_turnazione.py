@@ -208,6 +208,16 @@ class TurnazioneVVF:
                 for i in range(len(giorni_settimana)):
                     c_notti_settimana_vigile[vigile].SetCoefficient(self.var_notti[giorno + i][vigile], 1)
 
+            # CONSTR: max 1 festivo per vigile a settimana
+            c_festivi_settimana_vigile = {}
+            for vigile in self.var_notti[giorno]:
+                c_festivi_settimana_vigile[vigile] = \
+                    self.solver.Constraint(-self.solver.infinity(), 1,
+                                           f"constr_festivi_settimana({settimana})_vigile({vigile})")
+                for i in range(len(giorni_settimana)):
+                    if giorno + i in self.var_festivi and vigile in self.var_festivi[giorno + i]:
+                        c_festivi_settimana_vigile[vigile].SetCoefficient(self.var_festivi[giorno + i][vigile], 1)
+
             curr_squadra = (curr_squadra % num_squadre) + 1
             giorno += len(giorni_settimana)
             settimana += 1
