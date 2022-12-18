@@ -155,12 +155,18 @@ class TurnazioneVVF:
                                 zero_vars.append(self.var_festivi[curr_giorno][vigile])
                             pers_festivo.add(vigile)
 
-                    # CONSTR: max personale
+                    # CONSTR: personale minimo
                     p = _MESE_TO_PERSONALE_FESTIVO[curr_data.month]
                     pers_festivo_tot += p
-                    c = self.solver.Constraint(p, p, f"constr_festivo({curr_giorno})_personale")
+                    c = self.solver.Constraint(p, 4, f"constr_festivo({curr_giorno})_personale")
                     for vigile in self.var_festivi[curr_giorno]:
                         c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
+
+                    # CONTR: max 3/4 vigili non aspiranti
+                    c = self.solver.Constraint(3, p, f"constr_festivo({curr_giorno})_personale_non_aspirante")
+                    for vigile in self.var_festivi[curr_giorno]:
+                        if self.DB[vigile].grado not in ["Aspirante", "Allievo"]:
+                            c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
 
                     # CONSTR: almeno 1 autista per festivo
                     c = self.solver.Constraint(1, self.solver.infinity(), f"constr_festivo({curr_giorno})_autista")
@@ -522,8 +528,12 @@ class TurnazioneVVF:
                 num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
             if not self.DB[vigile].esente_notti():
                 num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
-            c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
-                                                    f"constr_servizi_totali_vigile({vigile})")
+            if self.DB[vigile].grado != "Aspirante":
+                c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
+                                           f"constr_servizi_totali_vigile({vigile})")
+            else:
+                c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
+                                           f"constr_servizi_totali_vigile({vigile})")
             for collection in [self.var_notti, self.var_sabati, self.var_festivi]:
                 for var in collection.values():
                     if vigile in var:
@@ -543,17 +553,21 @@ class TurnazioneVVF:
                         c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
                                                         f"constr_diff_servizi_plus_vigili({v1},{v2})")
                         c_plus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-                        c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
-                        # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
-                        c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
-                        # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
+                        if args.fast:
+                            c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
+                            c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
+                        else:
+                            c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
+                            c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
                         c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
                                                          f"constr_diff_servizi_minus_vigili({v1},{v2})")
                         c_minus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-                        c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
-                        # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
-                        c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
-                        # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
+                        if args.fast:
+                            c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
+                            c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
+                        else:
+                            c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
+                            c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
 
         print("* Fase 3: definisco l'obiettivo...")
 
@@ -564,6 +578,11 @@ class TurnazioneVVF:
             objective.SetCoefficient(var, 1)
         for var in self.var_cost_servizi_vigile.values():
             objective.SetCoefficient(var, (len(self.vigili) - 1))
+        # sottrai i festivi degli aspiranti per dargliene anche fuori dai mesi estivi
+        for giorno in self.var_festivi:
+            for vigile in self.var_festivi[giorno]:
+                if self.DB[vigile].grado == "Aspirante":
+                    objective.SetCoefficient( self.var_festivi[giorno][vigile], - 100)
         objective.SetMinimization()
 
         print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
@@ -595,6 +614,7 @@ class TurnazioneVVF:
             if self.STATUS == pywraplp.Solver.FEASIBLE:
                 print("ATTENZIONE: la soluzione trovata potrebbe non essere ottimale.")
             servizi_fuori_squadra = 0
+            capodanno = "NON CALCOLATO"
             print('* Soluzione:')
             print('Funzione obiettivo: ', self.solver.Objective().Value())
             print('Servizi per vigile:')
@@ -604,6 +624,7 @@ class TurnazioneVVF:
                         self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())
                         if giorno == self._NOTTI_ONEROSE[2] and self.var_notti[giorno][vigile].solution_value() == 1:
                             self.DB[vigile].capodanno += 1
+                            capodanno = f"{ self.DB[vigile].nome} { self.DB[vigile].cognome}"
                         if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             self.DB[vigile].notti_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
                             servizi_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
@@ -633,6 +654,7 @@ class TurnazioneVVF:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
                 print(line)
             print(f"Totale servizi assegnati fuori dalla squadra: {servizi_fuori_squadra}")
+            print(f"Vigile designato per la notte di capodanno: {capodanno}")
 
     def save_solution(self):
         if not self._printed_solution:

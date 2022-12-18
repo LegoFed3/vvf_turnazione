@@ -28,15 +28,15 @@ class VVFParser(argparse.ArgumentParser):
         self.add_argument("-c", "--servizi-compleanno",
                           help="enable assigning shifts on firefighter's birthdays",
                           action="store_true")
+        self.add_argument("-f", "--fast",
+                          help="faster computation, at th expense of service cost differentiation",
+                          action="store_true")
         self.add_argument("-j", "--jobs", type=int,
                           help="number of parallel threads to solve the model (Default: 1)",
                           default=1)
         self.add_argument("-l", "--loose",
                           help="enable assigning night shifts outside weekly availability",
                           action="store_true")
-        self.add_argument("-m", "--media-notti", type=str, action='store',
-                          help="average number of night shifts for regular firefighters",
-                          default="0+")  # nargs=2, default=[-1, -1]
         self.add_argument("-o", "--organico-fn", type=str,
                           help="path to CSV containing the available firemen (Default: organico.csv)",
                           default="./organico.csv")
