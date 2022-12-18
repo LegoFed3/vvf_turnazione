@@ -9,6 +9,7 @@ _GRADI_VALIDI = [
     "Caposquadra",
     "Vigile",
     "Aspirante",
+    "Allievo",
     "Complemento",
     "Ispettore",
     "Presidente",
@@ -72,13 +73,14 @@ class Vigile:
     delta_sabati = 0
     delta_festivi = 0
 
-    def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, squadre, dn, ds, df, eccezzioni):
+    def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, istruttore, squadre, dn, ds, df, eccezzioni):
         self.id = id_vigile
         self.nome = nome
         self.cognome = cognome
         self.data_di_nascita = dt.datetime.strptime(ddn, '%d/%m/%Y').date()
         self.grado = grado
         self.autista = autista == 'y'
+        self.istruttore_allievi = istruttore == 'y'
         if len(squadre) > 0:
             self.squadre = list(map(int, squadre.split(",")))
         else:
@@ -116,7 +118,7 @@ class Vigile:
         return self.__str__()
 
     def esente_servizi(self):
-        return (self.grado in ["Ispettore", "Presidente", "Complemento"] or "Aspettativa" in self.eccezioni
+        return (self.grado in ["Ispettore", "Presidente", "Complemento", "Allievo"] or "Aspettativa" in self.eccezioni
                 or "EsenteServizi" in self.eccezioni)
 
     def esente_notti(self):
@@ -166,6 +168,7 @@ class Vigile:
 
 
 def read_csv_vigili(filename):
+    print(f"\tLeggo file organico {filename}...")
     db = {}
     if not os.path.isfile(filename):
         print(f"ERRORE: il file '{filename}' che descrive i vigili non esiste!")
@@ -183,6 +186,7 @@ def read_csv_vigili(filename):
             row['Data di Nascita'],
             row['Grado'],
             row['Autista'],
+            row['Istruttore Allievi'],
             row['Squadra'],
             row['DeltaNotti'],
             row['DeltaSabati'],
@@ -193,6 +197,7 @@ def read_csv_vigili(filename):
 
 
 def read_csv_riporti(db, filename):
+    print(f"\tLeggo file riporti {filename}...")
     if not os.path.isfile(filename):
         print(f"ATTENZIONE: il file '{filename}' che descrive i riporti dello scorso anno non esiste!")
         print("\tContinuo senza.")
