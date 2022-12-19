@@ -43,6 +43,7 @@ class VVFParser(argparse.ArgumentParser):
         self.add_argument("-r", "--riporti-fn", type=str,
                           help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
                           default="./riporti.csv")
+        self.add_argument("-s", "--seed", type=int, help="SCIP random seed", default=round(time.time()))
         self.add_argument("-t", "--time-limit", type=int,
                           help="time limit in seconds (Default: no limit)", default=0)
         self.add_argument("-v", "--verbose", help="enable verbose solver output",

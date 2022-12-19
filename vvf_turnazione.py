@@ -56,6 +56,7 @@ class TurnazioneVVF:
         self._compute_servizi_speciali_onerosi()
         self.DB = vvf_io.read_csv_vigili(args.organico_fn)
         self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
+        self.seed = args.seed
         self.vigili = list(self.DB)
         self.vigili_squadra = {}
         for vigile in self.vigili:
@@ -605,6 +606,10 @@ class TurnazioneVVF:
         if time_limit > 0:
             self.solver.SetTimeLimit(time_limit * 1000)  # ms
         print("* Risolvo il modello... (max {}s)".format(time_limit if time_limit > 0 else "∞"))
+        print(f"\tRandom seed: {self.seed}")
+        if not self.solver.SetSolverSpecificParametersAsString(f"randomization/randomseedshift {self.seed}"):
+            print("ERRORE: non sono riuscito a configurare il random seed di SCIP.")
+            exit(-1)
         self.STATUS = self.solver.Solve(solver_params)
 
     def print_solution(self):

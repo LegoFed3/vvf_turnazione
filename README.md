@@ -39,6 +39,7 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -r RIPORTI_FN, --riporti-fn RIPORTI_FN
                         Percorso del file CSV contenente i riporti dei turni extra od onerosi svolti negli anni precedenti
                         Default: riporti.csv
+  -s SEED, --seed SEED  Configura uno SCIP random seed statico
   -t TIME_LIMIT, --time-limit TIME_LIMIT
                         Tempo limite in secondi
                         Default: nessun limite
