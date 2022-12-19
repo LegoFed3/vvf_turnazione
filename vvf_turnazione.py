@@ -496,8 +496,6 @@ class TurnazioneVVF:
                         mul_bday = 2
                     if giorno in self._NOTTI_ONEROSE:
                         pen_notti_onerose = 1
-                    if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
-                        pen_notti_onerose += 100 * self.DB[vigile].passato_capodanni
                     if giorno in self._FESTIVI_ONEROSI:
                         pen_festivi_onerosi = 2 + sum(self.DB[vigile].passato_festivi_onerosi)
                     if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
@@ -508,14 +506,22 @@ class TurnazioneVVF:
                     if giorno in self.var_festivi:
                         if vigile in self.var_festivi[giorno]:
                             # Base 1.5 per incoraggiare massima equità
-                            c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                             1.5 * mul_bday * mul_squadra + pen_festivi_onerosi)
+                            if self.DB[vigile].grado == "Aspirante":
+                                c.SetCoefficient(self.var_festivi[giorno][vigile],
+                                                 mul_bday * mul_squadra - 1)
+                            else:
+                                c.SetCoefficient(self.var_festivi[giorno][vigile],
+                                                 1.5 * mul_bday * mul_squadra + pen_festivi_onerosi)
                     if vigile in self.var_notti[giorno]:
-                        if mul_squadra > 1 and self.DB[vigile].delta_notti > 0 \
-                                or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
-                            mul_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
-                        c.SetCoefficient(self.var_notti[giorno][vigile],
-                                         1 * mul_bday * mul_squadra + pen_notti_onerose)
+                        if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
+                            c.SetCoefficient(self.var_notti[giorno][vigile],
+                                             1 * mul_bday + 100 * self.DB[vigile].passato_capodanni)
+                        else:
+                            if mul_squadra > 1 and self.DB[vigile].delta_notti > 0 \
+                                    or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
+                                mul_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
+                            c.SetCoefficient(self.var_notti[giorno][vigile],
+                                             1 * mul_bday * mul_squadra + pen_notti_onerose)
 
         # CONSTR: numero servizi uguale per tutti +/- 1
         for vigile in self.vigili:
@@ -579,10 +585,6 @@ class TurnazioneVVF:
         for var in self.var_cost_servizi_vigile.values():
             objective.SetCoefficient(var, (len(self.vigili) - 1))
         # sottrai i festivi degli aspiranti per dargliene anche fuori dai mesi estivi
-        for giorno in self.var_festivi:
-            for vigile in self.var_festivi[giorno]:
-                if self.DB[vigile].grado == "Aspirante":
-                    objective.SetCoefficient( self.var_festivi[giorno][vigile], - 100)
         objective.SetMinimization()
 
         print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
