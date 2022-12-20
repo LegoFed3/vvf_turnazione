@@ -265,10 +265,10 @@ class TurnazioneVVF:
             # CONSTR: numero notti
             if not self.DB[vigile].esente_notti():
                 notti_attese = round(_NUM_MEDIO_NOTTI) + self.DB[vigile].delta_notti
-                if self.DB[vigile].delta_notti != 0 and notti_attese > _NUM_MEDIO_NOTTI:
-                    print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, più della media ~{_NUM_MEDIO_NOTTI}.")
-                elif self.DB[vigile].delta_notti != 0 and notti_attese < _NUM_MEDIO_NOTTI:
-                    print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, meno della media ~{_NUM_MEDIO_NOTTI}.")
+                # if self.DB[vigile].delta_notti != 0 and notti_attese > _NUM_MEDIO_NOTTI:
+                #     print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, più della media ~{_NUM_MEDIO_NOTTI}.")
+                # elif self.DB[vigile].delta_notti != 0 and notti_attese < _NUM_MEDIO_NOTTI:
+                #     print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, meno della media ~{_NUM_MEDIO_NOTTI}.")
                 if self.DB[vigile].delta_notti != 0:
                     c = self.solver.Constraint(notti_attese, notti_attese, f"constr_notti_totali({vigile})")
                     for notte in self.var_notti:
@@ -599,8 +599,6 @@ class TurnazioneVVF:
 
     def solve(self, time_limit, verbose=False, num_threads=1):
         # Solver Parameters
-        if verbose:
-            self.solver.EnableOutput()
         self.solver.SetNumThreads(num_threads)
         gap = 0.00001
         solver_params = pywraplp.MPSolverParameters()
@@ -612,9 +610,13 @@ class TurnazioneVVF:
         if not self.solver.SetSolverSpecificParametersAsString(f"randomization/randomseedshift {self.args.seed}"):
             print("ERRORE: non sono riuscito a configurare il random seed di SCIP.")
             exit(-1)
+        if verbose:
+            print("SCIP output:")
+            self.solver.EnableOutput()
         self.STATUS = self.solver.Solve(solver_params)
 
     def print_solution(self):
+        print()
         self._printed_solution = True
         if self.STATUS == pywraplp.Solver.INFEASIBLE:
             print('ATTENZIONE: Il problema non ammette soluzione.')
@@ -677,7 +679,7 @@ class TurnazioneVVF:
             for vigile in self.DB:
                 servizi_per_vigile[vigile] = []
             with open(f"./turni_{self.anno}.csv", "w") as out:
-                out.write("#Data;Notte;Sabato/Festivo;;;;;Affiancamento\n")
+                out.write("Data;Notte;Sabato/Festivo;;;;;Affiancamento\n")
                 for giorno in range(len(self.var_notti)):
                     data = self.data_inizio + dt.timedelta(giorno)
                     line = str(data) + ";"
