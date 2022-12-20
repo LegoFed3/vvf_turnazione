@@ -29,7 +29,6 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
   -h, --help            Mostra le opzioni d'uso (in inglese)
   -c, --servizi-compleanno
                         Abilita l'assegnazione di servizi il giorno di compleanno
-  -f, --fast            Calcolo rapido, al costo di ridotta precisione del costo dei servizi speciali
   -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello
                         Default: 1
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità

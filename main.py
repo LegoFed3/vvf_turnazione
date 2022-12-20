@@ -28,9 +28,6 @@ class VVFParser(argparse.ArgumentParser):
         self.add_argument("-c", "--servizi-compleanno",
                           help="enable assigning shifts on firefighter's birthdays",
                           action="store_true")
-        self.add_argument("-f", "--fast",
-                          help="faster computation, at th expense of service cost differentiation",
-                          action="store_true")
         self.add_argument("-j", "--jobs", type=int,
                           help="number of parallel threads to solve the model (Default: 1)",
                           default=1)
