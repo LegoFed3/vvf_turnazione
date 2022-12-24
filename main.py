@@ -1,7 +1,8 @@
 import time
 import datetime as dt
 import argparse
-import vvf_turnazione as vvf
+import vvf_turnazione
+import vvf_io
 
 
 # Command line argument parser
@@ -51,10 +52,13 @@ t0 = time.time()
 parser = VVFParser()
 args = parser.parse_args()
 
-model = vvf.TurnazioneVVF(args)
-model.solve(args.time_limit, args.verbose, args.jobs)
+model = vvf_turnazione.ILPTurnazione(args)
+model.solve()
 
-model.save_solution_to_files()
-print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.csv e riporti_{model.anno}.csv.")
+# model = vvf_affiancamenti.ILPAffiancamenti(model)
+# model.solve()
+
+vvf_io.save_solution_to_files(model)
+
 t1 = time.time()
 print("Soluzione trovata in {0:.2f} secondi.".format(t1 - t0))

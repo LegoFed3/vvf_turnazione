@@ -211,3 +211,73 @@ def read_csv_riporti(db, filename):
             db[id_vigile].passato_sabati = list(map(lambda x: int(x), row[3:13]))
             db[id_vigile].passato_festivi_onerosi = list(map(lambda x: int(x), row[13:23]))
     return db
+
+
+def save_solution_to_files(model):
+    if len(model.solution) == 0:
+        print("ERRORE: impossibile salvare soluzione vuota su file.")
+        return
+    else:
+        # Salva i turni calcolati in un CSV
+        print("Creo file di output...")
+
+        with open(f"./turni_{model.anno}.csv", "w") as out:
+            out.write("Data;Notte;Sabato/Festivo;;;;;Affiancamento\n")
+            for giorno in range(len(model.solution)):
+                data = model.solution[giorno]['data']
+                line = str(data) + ";"
+
+                # Notti
+                for vigile in model.solution[giorno]['notte']:
+                    line += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+
+                # Sabati e Festivi
+                frag = ""
+                for vigile in model.solution[giorno]['sabato']:
+                    frag = model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+                for vigile in model.solution[giorno]['festivo']:
+                    frag = model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+                line += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+                line += frag + ";" * (5 - len(frag.split(";")))
+
+                # Affiancamenti
+                for affiancamento in ["notte_affiancamenti", "sabato_affiancamenti", "festivo_affiancamenti"]:
+                    for vigile in model.solution[giorno][affiancamento]:
+                        line += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+
+                out.write(line + "\n")
+
+        with open(f"./turni_per_vigile_{model.anno}.txt", "w") as out:
+            for vigile in model.DB:
+                out.write(model.DB[vigile].nome + " " + model.DB[vigile].cognome + ":\n")
+                for srv in model.servizi_per_vigile[vigile]:
+                    out.write("- " + srv + "\n")
+                out.write("\n")
+
+        # Riporta il numero di servizi extra ed i servizi speciali
+        with open(f"./riporti_{model.anno}.csv", "w") as out:
+            out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;;;;;;Festivi Onerosi\n")
+            for vigile in model.vigili:
+                line = f"{vigile};"
+                servizi_extra = 0
+                if (
+                        not model.DB[vigile].esente_notti()
+                        and model.DB[vigile].esente_sabati()
+                        and model.DB[vigile].esente_festivi()
+                        and model.DB[vigile].delta_notti == 0
+                        and model.DB[vigile].delta_sabati == 0
+                        and model.DB[vigile].delta_festivi == 0
+                ):
+                    servizi_extra = round(model.DB[vigile].numero_servizi() - model._SERVIZI_MINIMI)
+                line += f"{servizi_extra};"
+                line += f"{model.DB[vigile].passato_capodanni + model.DB[vigile].capodanno};"
+                line += f"{model.DB[vigile].sabati - model.DB[vigile].delta_sabati};"
+                for sabati in model.DB[vigile].passato_sabati[0:9]:
+                    line += f"{sabati};"
+                line += f"{model.DB[vigile].festivi_onerosi};"
+                for festivi in model.DB[vigile].passato_festivi_onerosi[0:9]:
+                    line += f"{festivi};"
+                out.write(line + "\n")
+
+        print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.txt e riporti_{model.anno}.csv.")
+        return

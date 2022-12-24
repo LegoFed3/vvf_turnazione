@@ -8,7 +8,7 @@ _SPAZIATORE_FESTIVI = 4  # 5
 _SPAZIATORE_SABATI = 8
 
 
-class TurnazioneVVF:
+class ILPTurnazione:
     # Collections
     giorno_squadra = {}
     var_notti = {}
@@ -599,20 +599,20 @@ class TurnazioneVVF:
         # model_f.write(Solver.ExportModelAsMpsFormat(True, False))
         model_f.close()
 
-    def solve(self, time_limit, verbose=False, num_threads=1):
+    def solve(self):
         # Solver Parameters
-        self.solver.SetNumThreads(num_threads)
+        self.solver.SetNumThreads(self.args.jobs)
         gap = 0.00001
         solver_params = pywraplp.MPSolverParameters()
         solver_params.SetDoubleParam(solver_params.RELATIVE_MIP_GAP, gap)
-        if time_limit > 0:
-            self.solver.SetTimeLimit(time_limit * 1000)  # ms
-        print("* Risolvo il modello... (max {}s)".format(time_limit if time_limit > 0 else "∞"))
+        if self.args.time_limit > 0:
+            self.solver.SetTimeLimit(self.args.time_limit * 1000)  # ms
+        print("* Risolvo il modello... (max {}s)".format(self.args.time_limit if self.args.time_limit > 0 else "∞"))
         print(f"\tRandom seed: {self.args.seed}")
         if not self.solver.SetSolverSpecificParametersAsString(f"randomization/randomseedshift {self.args.seed}"):
             print("ERRORE: non sono riuscito a configurare il random seed di SCIP.")
             exit(-1)
-        if verbose:
+        if self.args.verbose:
             print("SCIP output:")
             self.solver.EnableOutput()
         self.STATUS = self.solver.Solve(solver_params)
@@ -703,72 +703,6 @@ class TurnazioneVVF:
                             self.solution[giorno]['festivo'].append(vigile)
                             self.servizi_per_vigile[vigile].append((str(data) + " festivo"))
         return
-
-    def save_solution_to_files(self):
-        if len(self.solution) == 0:
-            print("Impossibile salvare soluzione vuota su file.")
-            return
-        else:
-            # Salva i turni calcolati in un CSV
-            print("Creo file di output...")
-
-            with open(f"./turni_{self.anno}.csv", "w") as out:
-                out.write("Data;Notte;Sabato/Festivo;;;;;Affiancamento\n")
-                for giorno in range(len(self.solution)):
-                    data = self.solution[giorno]['data']
-                    line = str(data) + ";"
-
-                    # Notti
-                    for vigile in self.solution[giorno]['notte']:
-                        line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-
-                    # Sabati e Festivi
-                    frag = ""
-                    for vigile in self.solution[giorno]['sabato']:
-                        frag = self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                    for vigile in self.solution[giorno]['festivo']:
-                        frag = self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                    line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                    line += frag + ";" * (5 - len(frag.split(";")))
-
-                    # Affiancamenti
-                    for affiancamento in ["notte_affiancamenti", "sabato_affiancamenti", "festivo_affiancamenti"]:
-                        for vigile in self.solution[giorno][affiancamento]:
-                            line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-
-                    out.write(line + "\n")
-
-            with open(f"./turni_per_vigile_{self.anno}.txt", "w") as out:
-                for vigile in self.DB:
-                    out.write(self.DB[vigile].nome + " " + self.DB[vigile].cognome + ":\n")
-                    for srv in self.servizi_per_vigile[vigile]:
-                        out.write("- " + srv + "\n")
-                    out.write("\n")
-
-            # Riporta il numero di servizi extra ed i servizi speciali
-            with open(f"./riporti_{self.anno}.csv", "w") as out:
-                out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;;;;;;Festivi Onerosi\n")
-                for vigile in self.vigili:
-                    line = f"{vigile};"
-                    servizi_extra = 0
-                    if (
-                            not self.DB[vigile].esente_notti()
-                            and self.DB[vigile].esente_sabati()
-                            and self.DB[vigile].esente_festivi()
-                            and self.DB[vigile].delta_notti == 0
-                            and self.DB[vigile].delta_sabati == 0
-                            and self.DB[vigile].delta_festivi == 0
-                    ):
-                        servizi_extra = round(self.DB[vigile].numero_servizi() - self._SERVIZI_MINIMI)
-                    line += f"{servizi_extra};"
-                    line += f"{self.DB[vigile].passato_capodanni + self.DB[vigile].capodanno};"
-                    line += f"{self.DB[vigile].sabati - self.DB[vigile].delta_sabati};"
-                    for sabati in self.DB[vigile].passato_sabati[0:9]:
-                        line += f"{sabati};"
-                    line += f"{self.DB[vigile].festivi_onerosi};"
-                    for festivi in self.DB[vigile].passato_festivi_onerosi[0:9]:
-                        line += f"{festivi};"
-                    out.write(line + "\n")
 
     def _compute_servizi_speciali_onerosi(self):
         pasqua = _calc_easter(self.anno)
