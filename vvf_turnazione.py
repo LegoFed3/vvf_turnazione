@@ -33,6 +33,8 @@ class TurnazioneVVF:
     # Model
     solver = pywraplp.Solver('Turnazione_VVF', pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING)
     STATUS = -1
+    solution = []
+    servizi_per_vigile = {}
 
     def __init__(self, args):
         self.args = args
@@ -614,10 +616,11 @@ class TurnazioneVVF:
             print("SCIP output:")
             self.solver.EnableOutput()
         self.STATUS = self.solver.Solve(solver_params)
+        self.print_solution()
+        self.save_solution()
 
     def print_solution(self):
         print()
-        self._printed_solution = True
         if self.STATUS == pywraplp.Solver.INFEASIBLE:
             print('ATTENZIONE: Il problema non ammette soluzione.')
             print('\tRilassa i vincoli e riprova.')
@@ -668,51 +671,77 @@ class TurnazioneVVF:
             print(f"Vigile designato per la notte di capodanno: {capodanno}")
 
     def save_solution(self):
-        if not self._printed_solution:
-            self.print_solution()  # Necessaria per precalcolare i numeri di servizi di ogni vigile
         if self.STATUS == pywraplp.Solver.INFEASIBLE:
             return
         else:
-            # Salva i turni calcolati in un CSV
-            print("Salvo la soluzione...")
-            servizi_per_vigile = {}
+            print("Salvo la soluzione trovata...")
             for vigile in self.DB:
-                servizi_per_vigile[vigile] = []
+                self.servizi_per_vigile[vigile] = []
+            for giorno in range(len(self.var_notti)):
+                data = self.data_inizio + dt.timedelta(giorno)
+                self.solution.append({
+                    'data': data,
+                    'notte': [],
+                    'notte_affiancamenti': [],
+                    'sabato': [],
+                    'sabato_affiancamenti': [],
+                    'festivo': [],
+                    'festivo_affiancamenti': [],
+                })
+                for vigile in self.var_notti[giorno]:
+                    if self.var_notti[giorno][vigile].solution_value() == 1:
+                        self.solution[giorno]['notte'].append(vigile)
+                        self.servizi_per_vigile[vigile].append((str(data) + " notte"))
+                if giorno in self.var_sabati:
+                    for vigile in self.var_sabati[giorno]:
+                        if self.var_sabati[giorno][vigile].solution_value() == 1:
+                            self.solution[giorno]['sabato'].append(vigile)
+                            self.servizi_per_vigile[vigile].append((str(data) + " sabato"))
+                elif giorno in self.var_festivi:
+                    for vigile in self.var_festivi[giorno]:
+                        if self.var_festivi[giorno][vigile].solution_value() == 1:
+                            self.solution[giorno]['festivo'].append(vigile)
+                            self.servizi_per_vigile[vigile].append((str(data) + " festivo"))
+        return
+
+    def save_solution_to_files(self):
+        if len(self.solution) == 0:
+            print("Impossibile salvare soluzione vuota su file.")
+            return
+        else:
+            # Salva i turni calcolati in un CSV
+            print("Creo file di output...")
+
             with open(f"./turni_{self.anno}.csv", "w") as out:
                 out.write("Data;Notte;Sabato/Festivo;;;;;Affiancamento\n")
-                for giorno in range(len(self.var_notti)):
-                    data = self.data_inizio + dt.timedelta(giorno)
+                for giorno in range(len(self.solution)):
+                    data = self.solution[giorno]['data']
                     line = str(data) + ";"
-                    for vigile in self.var_notti[giorno]:
-                        if self.var_notti[giorno][vigile].solution_value() == 1:
+
+                    # Notti
+                    for vigile in self.solution[giorno]['notte']:
+                        line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+
+                    # Sabati e Festivi
+                    frag = ""
+                    for vigile in self.solution[giorno]['sabato']:
+                        frag = self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                    for vigile in self.solution[giorno]['festivo']:
+                        frag = self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                    line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
+                    line += frag + ";" * (5 - len(frag.split(";")))
+
+                    # Affiancamenti
+                    for affiancamento in ["notte_affiancamenti", "sabato_affiancamenti", "festivo_affiancamenti"]:
+                        for vigile in self.solution[giorno][affiancamento]:
                             line += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                            servizi_per_vigile[vigile].append((str(data) + " notte"))
-                    if giorno in self.var_sabati:
-                        frag = ""
-                        for vigile in self.vigili:
-                            if vigile in self.var_sabati[giorno] \
-                                    and self.var_sabati[giorno][vigile].solution_value() == 1:
-                                frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                                servizi_per_vigile[vigile].append((str(data) + " sabato"))
-                        line += frag
-                        line += ";" * (5 - len(frag.split(";")))
-                    elif giorno in self.var_festivi:
-                        frag = ""
-                        for vigile in self.vigili:
-                            if vigile in self.var_festivi[giorno] \
-                                    and self.var_festivi[giorno][vigile].solution_value() == 1:
-                                frag += self.DB[vigile].nome + " " + self.DB[vigile].cognome + ";"
-                                servizi_per_vigile[vigile].append((str(data) + " festivo"))
-                        line += frag
-                        line += ";" * (5 - len(frag.split(";")))
-                    else:
-                        line += ";;;;;"
+
                     out.write(line + "\n")
 
             with open(f"./turni_per_vigile_{self.anno}.txt", "w") as out:
                 for vigile in self.DB:
                     out.write(self.DB[vigile].nome + " " + self.DB[vigile].cognome + ":\n")
-                    for srv in servizi_per_vigile[vigile]:
+                    for srv in self.servizi_per_vigile[vigile]:
                         out.write("- " + srv + "\n")
                     out.write("\n")
 

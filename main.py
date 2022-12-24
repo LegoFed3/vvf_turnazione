@@ -54,7 +54,7 @@ args = parser.parse_args()
 model = vvf.TurnazioneVVF(args)
 model.solve(args.time_limit, args.verbose, args.jobs)
 
-model.save_solution()
+model.save_solution_to_files()
 print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.csv e riporti_{model.anno}.csv.")
 t1 = time.time()
 print("Soluzione trovata in {0:.2f} secondi.".format(t1 - t0))
