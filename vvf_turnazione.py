@@ -4,9 +4,6 @@ import datetime as dt
 import math
 import vvf_io
 
-_SPAZIATORE_FESTIVI = 4  # 5
-_SPAZIATORE_SABATI = 8
-
 
 class ILPTurnazione:
     # Collections
@@ -19,7 +16,6 @@ class ILPTurnazione:
     var_differenza_servizi = {}
 
     DB = {}
-    vigili = []
     vigili_squadra = {}
     anno = 0
     data_inizio = 0
@@ -31,22 +27,22 @@ class ILPTurnazione:
     _NOTTI_ONEROSE = []
 
     # Model
-    solver = pywraplp.Solver('Turnazione_VVF', pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING)
+    solver = pywraplp.Solver('VVF_Turnazione', pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING)
     STATUS = -1
     solution = []
     servizi_per_vigile = {}
 
     def __init__(self, args):
+        print("* Creo il modello per la turnazione...")
         self.args = args
-        print("* Creo il modello...")
         self.data_inizio = args.data_di_inizio
         self.data_fine = args.data_di_fine
         self.anno = self.data_inizio.year
-        if self.data_inizio.weekday() != 4:
-            print("ERRORE: il giorno di inizio non è un venerdì!")
+        if self.data_inizio.weekday() != 0:
+            print("ERRORE: il giorno di inizio non è un lunedì!")
             exit(-1)
-        elif self.data_fine.weekday() != 4:
-            print("ERRORE: il giorno di fine non è un venerdì!")
+        if self.data_fine.weekday() != 6:
+            print("ERRORE: il giorno di fine non è una domenica!")
             exit(-1)
         if (self.data_fine - self.data_inizio).days > 400:
             print(f"ERRORE: il periodo dal {self.data_inizio} al {self.data_fine} è troppo lungo, sicuri sia giusto?")
@@ -59,9 +55,8 @@ class ILPTurnazione:
         self._compute_servizi_speciali_onerosi()
         self.DB = vvf_io.read_csv_vigili(args.organico_fn)
         self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
-        self.vigili = list(self.DB)
         self.vigili_squadra = {}
-        for vigile in self.vigili:
+        for vigile in self.DB:
             # Squadra
             for squadra in self.DB[vigile].squadre:
                 if squadra == 0:
@@ -80,19 +75,14 @@ class ILPTurnazione:
         print("* Fase 1: creo possibilità...")
 
         zero_vars = []
-        skipped_first_monday = False
         giorno = 0
         settimana = 0
         pers_festivo_tot = 0
         num_festivi_estivi = 0
         pers_festivo = set()
         pers_notte = set()
+        giorni_settimana = list(range(7))
         while giorno < num_giorni:
-
-            giorni_settimana = list(range(7))
-            if not skipped_first_monday:
-                giorni_settimana = list(range(10))
-                skipped_first_monday = True
 
             for i in giorni_settimana:
                 curr_giorno = giorno + i
@@ -103,7 +93,7 @@ class ILPTurnazione:
 
                 # VAR: vigili di squadra candidati per la notte
                 self.var_notti[curr_giorno] = {}
-                for vigile in self.vigili:
+                for vigile in self.DB:
                     if (not self.DB[vigile].esente_notti()
                         and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
                         and f"NoNottiMese{curr_data.month}" not in self.DB[vigile].eccezioni
@@ -127,7 +117,7 @@ class ILPTurnazione:
 
                     # VAR: vigili candidati per il sabato
                     self.var_sabati[curr_giorno] = {}
-                    for vigile in self.vigili:
+                    for vigile in self.DB:
                         if (not self.DB[vigile].esente_sabati()
                             and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
                             and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
@@ -138,7 +128,7 @@ class ILPTurnazione:
 
                     # CONSTR: 1 vigile per sabato
                     c = self.solver.Constraint(1, 1, f"constr_sabato({curr_giorno})")
-                    for vigile in self.vigili:
+                    for vigile in self.DB:
                         if vigile in self.var_sabati[curr_giorno]:
                             c.SetCoefficient(self.var_sabati[curr_giorno][vigile], 1)
 
@@ -147,7 +137,7 @@ class ILPTurnazione:
 
                     # VAR: vigili candidati per il festivo
                     self.var_festivi[curr_giorno] = {}
-                    for vigile in self.vigili:
+                    for vigile in self.DB:
                         if (not self.DB[vigile].esente_festivi()
                             and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
                             and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
@@ -231,7 +221,7 @@ class ILPTurnazione:
         print(f"\tCon {len(pers_notte)} vigili che svolgono notti ({notti_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_NOTTI}-{_NUM_MAX_NOTTI} notti a testa.")
 
-        _NUM_PERS_SABATI = len(self.var_sabati[1])  # Giorno 1 è sabato perchè 0 è venerdì
+        _NUM_PERS_SABATI = len(self.var_sabati[5])  # Giorno 5 è sabato perchè 0 è lunedì
         sabati_extra_tot = sum([v.delta_sabati for v in self.DB.values()])
         _NUM_MIN_SABATI = 0
         _NUM_MAX_SABATI = 1
@@ -260,7 +250,7 @@ class ILPTurnazione:
 
         print("* Fase 2: aggiungo vincoli...")
 
-        for vigile in self.vigili:
+        for vigile in self.DB:
             if self.DB[vigile].esente_servizi():
                 continue
 
@@ -533,7 +523,7 @@ class ILPTurnazione:
                                              1 * mul_bday * mul_squadra + pen_notti_onerose)
 
         # CONSTR: numero servizi uguale per tutti +/- 1
-        for vigile in self.vigili:
+        for vigile in self.DB:
             if self.DB[vigile].esente_servizi():
                 continue
             num_servizi_minimi = 0
@@ -554,11 +544,12 @@ class ILPTurnazione:
                     if vigile in var:
                         c.SetCoefficient(var[vigile], 1)
 
-        for i in range(len(self.vigili)):
-            v1 = self.vigili[i]
+        vigili = list(self.DB.keys())
+        for i in range(len(self.DB)):
+            v1 = vigili[i]
             if not self.DB[v1].esente_servizi():
-                for j in range(i + 1, len(self.vigili)):
-                    v2 = self.vigili[j]
+                for j in range(i + 1, len(vigili)):
+                    v2 = vigili[j]
                     if not self.DB[v2].esente_servizi():
                         # VAR: differenza numero servizi tra due vigili (ausiliaria)
                         self.var_differenza_servizi[(v1, v2)] = self.solver.NumVar(-self.solver.infinity(),
@@ -588,7 +579,7 @@ class ILPTurnazione:
         for var in self.var_differenza_servizi.values():
             objective.SetCoefficient(var, 1)
         for var in self.var_cost_servizi_vigile.values():
-            objective.SetCoefficient(var, (len(self.vigili) - 1))
+            objective.SetCoefficient(var, (len(self.DB) - 1))
         # sottrai i festivi degli aspiranti per dargliene anche fuori dai mesi estivi
         objective.SetMinimization()
 
@@ -608,7 +599,6 @@ class ILPTurnazione:
         if self.args.time_limit > 0:
             self.solver.SetTimeLimit(self.args.time_limit * 1000)  # ms
         print("* Risolvo il modello... (max {}s)".format(self.args.time_limit if self.args.time_limit > 0 else "∞"))
-        print(f"\tRandom seed: {self.args.seed}")
         if not self.solver.SetSolverSpecificParametersAsString(f"randomization/randomseedshift {self.args.seed}"):
             print("ERRORE: non sono riuscito a configurare il random seed di SCIP.")
             exit(-1)
@@ -632,7 +622,7 @@ class ILPTurnazione:
             print('* Soluzione:')
             print('Funzione obiettivo: ', self.solver.Objective().Value())
             print('Servizi per vigile:')
-            for vigile in self.vigili:
+            for vigile in self.DB:
                 for giorno in self.var_notti:
                     if vigile in self.var_notti[giorno]:
                         self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())

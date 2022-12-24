@@ -257,7 +257,7 @@ def save_solution_to_files(model):
         # Riporta il numero di servizi extra ed i servizi speciali
         with open(f"./riporti_{model.anno}.csv", "w") as out:
             out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;;;;;;Festivi Onerosi\n")
-            for vigile in model.vigili:
+            for vigile in model.DB:
                 line = f"{vigile};"
                 servizi_extra = 0
                 if (

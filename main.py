@@ -2,6 +2,7 @@ import time
 import datetime as dt
 import argparse
 import vvf_turnazione
+import vvf_affiancamenti
 import vvf_io
 
 
@@ -52,11 +53,21 @@ t0 = time.time()
 parser = VVFParser()
 args = parser.parse_args()
 
+print(
+    "  __     ____     _______   _____                           _                   \n"
+    "  \ \   / /\ \   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  \n"
+    "   \ \ / /  \ \ / /| |_      | || | | | '__| '_ \ / _` |_  / |/ _ \| '_ \ / _ \ \n"
+    "    \ V /    \ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ \n"
+    "     \_/      \_/  |_|       |_| \__,_|_|  |_| |_|\__,_/___|_|\___/|_| |_|\___| \n"
+    "                                                                                \n"
+)
+print(f"\tRandom seed: {args.seed}")
+
 model = vvf_turnazione.ILPTurnazione(args)
 model.solve()
 
-# model = vvf_affiancamenti.ILPAffiancamenti(model)
-# model.solve()
+model = vvf_affiancamenti.ILPAffiancamenti(model)
+model.solve()
 
 vvf_io.save_solution_to_files(model)
 
