@@ -21,9 +21,14 @@ class VVFParser(argparse.ArgumentParser):
         # Positional Arguments
         self.add_argument("input_file", type=str, help="input .ics file")
 
+        # Optional Arguments
+        self.add_argument("-s", "--seed", type=int, help="SCIP random seed", default=round(time.time()))
+
 
 parser = VVFParser()
 args = parser.parse_args()
+
+print(f"Random seed: {args.seed}\n")
 
 print("Logging in...")
 creds = None
@@ -62,7 +67,7 @@ try:
                     attendees = [{'email': str(component.get('attendee')).split(":")[1]}]
 
                 event = {
-                    'id': component.get('uid'),
+                    'id': component.get('uid')+"seed"+str(args.seed),
                     'summary': component.get('summary'),
                     'location': component.get('location'),
                     'description': component.get('description'),
