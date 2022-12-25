@@ -3,11 +3,11 @@ Questo programma calcola la turnazione per i vigili del fuoco volontari, tenendo
 È basato su una formulazione di [programmazione lineare intera](https://it.wikipedia.org/wiki/Programmazione_lineare) (Integer Linear Programming, ILP).
 
 ## Prerequisiti
-Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.6) e si basa, per la soluzione di una formulazione ILP, su [Google OR Tools](https://developers.google.com/optimization) ed il solver GLOP da esso fornito, oltre che sulla libreria [Pandas](https://pandas.pydata.org/).
+Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.10) e si basa, per la soluzione di una formulazione ILP, su [Google OR Tools](https://developers.google.com/optimization) ed il solver SCIP da esso fornito, oltre che sulla librerie [Pandas](https://pandas.pydata.org/) ed [Icalendar](https://icalendar.readthedocs.io).
 Su e.g. Ubuntu Linux (e distribuzioni analoghe) si possono installare con:
 ```
 sudo apt install python3
-python -m pip install --upgrade --user ortools pandas
+python -m pip install --upgrade --user ortools pandas icalendar
 ```
 Mentre su Windows si vedano i link di cui sopra.
 
