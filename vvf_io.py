@@ -298,7 +298,7 @@ def save_solution_to_files(model):
 
             # Notti
             e = ical.Event()
-            e.add('uid', f'VVFARCO{model.anno}notte{giorno}')
+            e.add('uid', f'vvfarco{model.anno}notte{giorno}')
             e.add('summary', 'Servizio Notturno')
             e.add('name', 'Servizio Notturno')
             e.add('description', 'Servizio Notturno')
@@ -322,7 +322,7 @@ def save_solution_to_files(model):
             # Sabati
             if len(val['sabato']) > 0:
                 e = ical.Event()
-                e.add('uid', f'VVFARCO{model.anno}sabato{giorno}')
+                e.add('uid', f'vvfarco{model.anno}sabato{giorno}')
                 e.add('summary', 'Servizio Sabato')
                 e.add('name', 'Servizio Sabato')
                 e.add('description', 'Servizio Sabato')
@@ -345,7 +345,7 @@ def save_solution_to_files(model):
             # Festivi
             if len(val['festivo']) > 0:
                 e = ical.Event()
-                e.add('uid', f'VVFARCO{model.anno}festivo{giorno}')
+                e.add('uid', f'vvfarco{model.anno}festivo{giorno}')
                 e.add('summary', 'Servizio Festivo')
                 e.add('name', 'Servizio Festivo')
                 e.add('description', 'Servizio Festivo')
