@@ -15,7 +15,7 @@ Mentre su Windows si vedano i link di cui sopra.
 ```
 python main.py data_di_inizio data_di_fine squadra_di_partenza 
 ```
-Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 15 gennaio 2021 a venerdì 14 gennaio 2022 con la squadra 3 reperibile per la prima settimana, consumando i file di organico e riporti di default.
+Ad esempio: `python main.py 2023-1-16 2024-1-14 1` calcola i turni da lunedì 16 gennaio 2023 a lunedì 14 gennaio 2024 con la squadra 1 reperibile per la prima settimana, consumando i file di organico e riporti di default.
 
 ### Argomenti
 ```
@@ -44,7 +44,7 @@ Ad esempio: `python main.py 2021-1-15 2022-1-14 3` calcola i turni da venerdì 1
                         Default: nessun limite
   -v, --verbose         Abilita l'output verboso del solver
 ```
-Ad esempio: `python main.py 2021-1-15 2022-1-14 3 -o organico_2020.csv -r riporti_2020.csv -j 4 -t 300 -l -n` calcola, come sopra, i turni da venerdì 15 gennaio 2021 a venerdì 14 gennaio 2022 con la squadra 3 reperibile per la prima settimana, consumando però i file organico_2020.csv e riporti_2020.csv, limitando il solver ad utilizzare circa 5 minuti di CPU, distribuendo il calcolo della soluzione su 4 thread, permettendo l'assegnazione di notti fuori dalla settimana di reperibilità (se necessario a ridurre le differenze tra i numeri di servizi assegnati), ed assegnando notti extra per i primi due anni ai neo-vigili (dopo l'aspirantato).
+Ad esempio: `python main.py 2023-1-16 2024-1-14 1 -o organico_2022.csv -r riporti_2022.csv -j 4 -t 300 -l -v` calcola, come sopra, i turni da lunedì 16 gennaio 2023 a lunedì 14 gennaio 2024 con la squadra 3 reperibile per la prima settimana, consumando però i file `organico_2022.csv` e `riporti_2022.csv`, limitando il solver ad utilizzare circa 5 minuti di CPU, distribuendo il calcolo della soluzione su 4 thread, e permettendo l'assegnazione di notti fuori dalla settimana di reperibilità (se necessario a ridurre le differenze tra i numeri di servizi assegnati).
 
 ## Input
 Il programma consuma in input due file (esempi dei quali sono forniti in questo repository):
