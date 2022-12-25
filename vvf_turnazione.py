@@ -501,16 +501,17 @@ class ILPTurnazione:
                         mul_squadra = 2  # Servizi NON di squadra costano di più
                     if giorno in self.var_sabati:
                         if vigile in self.var_sabati[giorno]:
-                            c.SetCoefficient(self.var_sabati[giorno][vigile], 2 * mul_bday * mul_squadra * mul_sabati)
+                            c.SetCoefficient(self.var_sabati[giorno][vigile],
+                                             2 * mul_bday * mul_squadra * mul_squadra * mul_sabati)
                     if giorno in self.var_festivi:
                         if vigile in self.var_festivi[giorno]:
                             # Base 1.5 per incoraggiare massima equità
                             if self.DB[vigile].grado == "Aspirante":
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                                 mul_bday * mul_squadra - 1)
+                                                 mul_bday * mul_squadra * mul_squadra - 1)
                             else:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                                 1.5 * mul_bday * mul_squadra + pen_festivi_onerosi)
+                                                 1.5 * mul_bday * mul_squadra * mul_squadra + pen_festivi_onerosi)
                     if vigile in self.var_notti[giorno]:
                         if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
                             c.SetCoefficient(self.var_notti[giorno][vigile],
@@ -700,7 +701,7 @@ class ILPTurnazione:
         self._FESTIVI_SPECIALI = [
             dt.date(self.anno, 1, 6),  # Epifania
             pasqua,  # Pasqua
-            pasqua + dt.timedelta(1),  # Pasquetta
+            pasqua + dt.timedelta(days=1),  # Pasquetta
             dt.date(self.anno, 4, 25),  # 25 Aprile
             dt.date(self.anno, 5, 1),  # 1 Maggio
             dt.date(self.anno, 6, 2),  # 2 Giugno

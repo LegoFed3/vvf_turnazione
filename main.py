@@ -61,7 +61,7 @@ print(
     "     \_/      \_/  |_|       |_| \__,_|_|  |_| |_|\__,_/___|_|\___/|_| |_|\___| \n"
     "                                                                                \n"
 )
-print(f"\tRandom seed: {args.seed}")
+print(f"Random seed: {args.seed}\n")
 
 model = vvf_turnazione.ILPTurnazione(args)
 model.solve()

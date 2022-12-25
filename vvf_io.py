@@ -1,5 +1,7 @@
 import datetime as dt
 import pandas as pd
+import icalendar as ical
+import pytz
 import os
 
 _GRADI_VALIDI = [
@@ -44,9 +46,6 @@ for i in range(1, 12 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoSabatiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoFestiviMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoServiziMese{i}")
-    # _ECCEZZIONI_VALIDE.append(f"LimiteNotti{i}")
-    # _ECCEZZIONI_VALIDE.append(f"ExtraNotti{i}")
-    # _ECCEZZIONI_VALIDE.append(f"ExtraSabati{i}")
 
 
 class Vigile:
@@ -73,12 +72,13 @@ class Vigile:
     delta_sabati = 0
     delta_festivi = 0
 
-    def __init__(self, id_vigile, nome, cognome, ddn, grado, autista, istruttore, squadre, dn, ds, df, eccezzioni):
+    def __init__(self, id_vigile, nome, cognome, ddn, grado, email, autista, istruttore, squadre, dn, ds, df, exc):
         self.id = id_vigile
         self.nome = nome
         self.cognome = cognome
         self.data_di_nascita = dt.datetime.strptime(ddn, '%d/%m/%Y').date()
         self.grado = grado
+        self.email = email if email != "" else None
         self.autista = autista == 'y'
         self.istruttore_allievi = istruttore == 'y'
         if len(squadre) > 0:
@@ -91,7 +91,7 @@ class Vigile:
             self.delta_sabati = int(ds)
         if len(df) > 0:
             self.delta_festivi = int(df)
-        self.eccezioni = set(eccezzioni.strip(" ").split(","))
+        self.eccezioni = set(exc.strip(" ").split(","))
         if '' in self.eccezioni:
             self.eccezioni.remove('')
 
@@ -116,6 +116,9 @@ class Vigile:
 
     def __repr__(self):
         return self.__str__()
+
+    def get_full_name(self):
+        return f'{self.nome} {self.cognome}'
 
     def esente_servizi(self):
         return (self.grado in ["Ispettore", "Presidente", "Complemento", "Allievo"] or "Aspettativa" in self.eccezioni
@@ -185,6 +188,7 @@ def read_csv_vigili(filename):
             row['Cognome'],
             row['Data di Nascita'],
             row['Grado'],
+            row['Email'],
             row['Autista'],
             row['Istruttore Allievi'],
             row['Squadra'],
@@ -279,5 +283,93 @@ def save_solution_to_files(model):
                     line += f"{festivi};"
                 out.write(line + "\n")
 
-        print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.txt e riporti_{model.anno}.csv.")
+        # Genera ics per calendario
+        tz = pytz.timezone('Europe/Rome')
+        organizer = ical.vCalAddress('MAILTO:dati@vigilidelfuocoarco.it')
+        organizer.params['cn'] = ical.vText('VVF Arco')
+
+        cal = ical.Calendar()
+        cal.add('version', '2.0')
+        cal.add('prodid', '-//VVF Arco//VVF Turnazione//EN')
+        cal.add('calscale', 'GREGORIAN')
+        cal.add('method', 'PUBLISH')
+
+        for giorno, val in enumerate(model.solution):
+
+            # Notti
+            e = ical.Event()
+            e.add('uid', f'VVFARCO{model.anno}notte{giorno}')
+            e.add('summary', 'Servizio Notturno')
+            e.add('name', 'Servizio Notturno')
+            e.add('description', 'Servizio Notturno')
+            e.add('organizer', organizer)
+            e.add('location', 'Caserma VVF Arco')
+            e.add('dtstamp', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=20, minute=0, second=0))))
+            e.add('dtstart', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=20, minute=0, second=0))))
+            e.add('dtend', tz.localize(dt.datetime.combine((val['data'] + dt.timedelta(days=1)),
+                                                           dt.time(hour=8, minute=0, second=0))))
+
+            for key in ['notte', 'notte_affiancamenti']:
+                for vigile in val[key]:
+                    a = ical.vCalAddress(f'MAILTO:{model.DB[vigile].email}')
+                    a.params['cn'] = ical.vText(f'{model.DB[vigile].get_full_name()}')
+                    a.params['ROLE'] = ical.vText('REQ-PARTICIPANT')
+
+                    e.add('attendee', a, encode=0)
+
+            cal.add_component(e)
+
+            # Sabati
+            if len(val['sabato']) > 0:
+                e = ical.Event()
+                e.add('uid', f'VVFARCO{model.anno}sabato{giorno}')
+                e.add('summary', 'Servizio Sabato')
+                e.add('name', 'Servizio Sabato')
+                e.add('description', 'Servizio Sabato')
+                e.add('organizer', organizer)
+                e.add('location', 'Caserma VVF Arco')
+                e.add('dtstamp', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=8, minute=0, second=0))))
+                e.add('dtstart', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=8, minute=0, second=0))))
+                e.add('dtend', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=20, minute=0, second=0))))
+
+                for key in ['sabato', 'sabato_affiancamenti']:
+                    for vigile in val[key]:
+                        a = ical.vCalAddress(f'MAILTO:{model.DB[vigile].email}')
+                        a.params['cn'] = ical.vText(f'{model.DB[vigile].get_full_name()}')
+                        a.params['ROLE'] = ical.vText('REQ-PARTICIPANT')
+
+                        e.add('attendee', a, encode=0)
+
+                cal.add_component(e)
+
+            # Festivi
+            if len(val['festivo']) > 0:
+                e = ical.Event()
+                e.add('uid', f'VVFARCO{model.anno}festivo{giorno}')
+                e.add('summary', 'Servizio Festivo')
+                e.add('name', 'Servizio Festivo')
+                e.add('description', 'Servizio Festivo')
+                e.add('organizer', organizer)
+                e.add('location', 'Caserma VVF Arco')
+                e.add('dtstamp', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=8, minute=0, second=0))))
+                e.add('dtstart', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=8, minute=0, second=0))))
+                e.add('dtend', tz.localize(dt.datetime.combine(val['data'], dt.time(hour=20, minute=0, second=0))))
+
+                for key in ['festivo', 'festivo_affiancamenti']:
+                    for vigile in val[key]:
+                        a = ical.vCalAddress(f'MAILTO:{model.DB[vigile].email}')
+                        a.params['cn'] = ical.vText(f'{model.DB[vigile].get_full_name()}')
+                        a.params['ROLE'] = ical.vText('REQ-PARTICIPANT')
+
+                        e.add('attendee', a, encode=0)
+
+                cal.add_component(e)
+
+        # print(cal.to_ical().decode("utf-8").replace('\r\n', '\n').strip())
+
+        with open(f"./icalendar_{model.anno}.ics", "wb") as out:
+            out.write(cal.to_ical())
+
+        print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.txt, icalendar_{model.anno}.ics "
+              f"e riporti_{model.anno}.csv.")
         return

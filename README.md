@@ -53,7 +53,9 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Nome*, *Cognome* e *Data di Nascita*: generalità del vigile. La data dev'essere nel formato GG/MM/AAAA.
 	* *Grado*: grado del vigile (determina alcune restrizioni sul tipo e numero di servizi). I gradi validi sono: Comandante, Vicecomandante, Capoplotone, Caposquadra, Vigile, Aspirante, Complemento, Ispettore, Presidente.
 	* *Squadra*: squadra reperibile cui il vigile afferisce. Il numero 0 è riservato ai vigili non afferenti ad alcuna squadra (e.g. il Comandante).
+	* *Email*: email di servizio del vigile.
 	* *Autista*: 'y' se il vigile ha patente C e può quindi essere autista in servizio festivo.
+	* *Istruttore Allievi*: 'y' se il vigile è autorizzato ad avere allievi affiancati durante festivi.
 	* *DeltaNotti, DeltaSabati, DeltaFestivi*: servizi extra del tipo indicato.
 	* *Eccezioni*: lista separata da virgola e senza spazi (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
 		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
@@ -76,7 +78,8 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Servizi Onerosi*: 5 colonne indicanti il numero di servizi onerosi assegnati nei 5 anni precedenti.
 
 ## Output
-Il programma produce tre file:
+Il programma produce quattro file:
 * *turni_&lt;anno&gt;.csv*: contiene la turnistica calcolata; per ogni data è indicato il vigile assegnato al relativo notturno, e per sabati ed i festivi i vigili assegnati ai medesimi.
 * *turni_per_vigile_&lt;anno&gt;.txt*: contiene la turnistica calcolata organizzata come lista servizi per ogni vigile.
 * *riporti_&lt;anno&gt;.csv*: file dei riporti (aggiornato) da utilizzare per il calcolo l'anno successivo.
+* *icalendar__&lt;anno&gt;.ics*: file icalendar contenente l'intera turnazione calcolata.
