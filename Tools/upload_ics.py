@@ -83,7 +83,7 @@ try:
                     'reminders': {
                         'useDefault': False,
                         'overrides': [
-                            {'method': 'email', 'minutes': 24 * 60},
+                            # {'method': 'email', 'minutes': 24 * 60},
                             {'method': 'popup', 'minutes': 10},
                         ],
                     },
