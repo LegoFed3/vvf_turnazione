@@ -13,7 +13,7 @@ class ILPTurnazione:
     var_festivi = {}
     var_servizi_vigile = {}
     var_cost_servizi_vigile = {}
-    var_differenza_servizi = {}
+    # var_differenza_servizi = {}
 
     DB = {}
     vigili_squadra = {}
@@ -545,43 +545,43 @@ class ILPTurnazione:
                     if vigile in var:
                         c.SetCoefficient(var[vigile], 1)
 
-        vigili = list(self.DB.keys())
-        for i in range(len(self.DB)):
-            v1 = vigili[i]
-            if not self.DB[v1].esente_servizi():
-                for j in range(i + 1, len(vigili)):
-                    v2 = vigili[j]
-                    if not self.DB[v2].esente_servizi():
-                        # VAR: differenza numero servizi tra due vigili (ausiliaria)
-                        self.var_differenza_servizi[(v1, v2)] = self.solver.NumVar(-self.solver.infinity(),
-                                                                                   self.solver.infinity(),
-                                                                                   f"var_aux_diff_servizi({v1},{v2})")
-                        # CONSTR: implementa quanto sopra
-                        c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
-                                                        f"constr_diff_servizi_plus_vigili({v1},{v2})")
-                        c_plus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-                        c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
-                        c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
-                        # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
-                        # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
-                        c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
-                                                         f"constr_diff_servizi_minus_vigili({v1},{v2})")
-                        c_minus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-                        c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
-                        c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
-                        # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
-                        # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
+        # vigili = list(self.DB.keys())
+        # for i in range(len(self.DB)):
+        #     v1 = vigili[i]
+        #     if not self.DB[v1].esente_servizi():
+        #         for j in range(i + 1, len(vigili)):
+        #             v2 = vigili[j]
+        #             if not self.DB[v2].esente_servizi():
+        #                 # VAR: differenza numero servizi tra due vigili (ausiliaria)
+        #                 self.var_differenza_servizi[(v1, v2)] = self.solver.NumVar(-self.solver.infinity(),
+        #                                                                            self.solver.infinity(),
+        #                                                                            f"var_aux_diff_servizi({v1},{v2})")
+        #                 # CONSTR: implementa quanto sopra
+        #                 c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
+        #                                                 f"constr_diff_servizi_plus_vigili({v1},{v2})")
+        #                 c_plus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
+        #                 c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
+        #                 c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
+        #                 # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
+        #                 # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
+        #                 c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
+        #                                                  f"constr_diff_servizi_minus_vigili({v1},{v2})")
+        #                 c_minus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
+        #                 c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
+        #                 c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
+        #                 # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
+        #                 # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
 
         print("* Fase 3: definisco l'obiettivo...")
 
         # OBJECTIVE
         objective = self.solver.Objective()
-        # OBJ: minimizza le differenze tra servizi ed il costo totale dei servizi
-        for var in self.var_differenza_servizi.values():
-            objective.SetCoefficient(var, 1)
+        # # OBJ: minimizza le differenze tra servizi - handled via constraint anyway
+        # for var in self.var_differenza_servizi.values():
+        #     objective.SetCoefficient(var, 1)
+        # OBJ: minimizza il costo totale dei servizi
         for var in self.var_cost_servizi_vigile.values():
             objective.SetCoefficient(var, (len(self.DB) - 1))
-        # sottrai i festivi degli aspiranti per dargliene anche fuori dai mesi estivi
         objective.SetMinimization()
 
         print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
