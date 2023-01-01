@@ -11,9 +11,9 @@ class ILPTurnazione:
     var_notti = {}
     var_sabati = {}
     var_festivi = {}
-    var_servizi_vigile = {}
     var_cost_servizi_vigile = {}
-    # var_differenza_servizi = {}
+    var_cont_servizi_vigile_mese = {}
+    var_diff_servizi_vigile_mesi = {}
 
     DB = {}
     vigili_squadra = {}
@@ -445,9 +445,8 @@ class ILPTurnazione:
                         if mese in mesi_da_saltare:
                             if vigile in self.var_notti[giorno]:
                                 c.SetCoefficient(self.var_notti[giorno][vigile], 1)
-                            if giorno in self.var_sabati:
-                                if vigile in self.var_sabati[giorno]:
-                                    c.SetCoefficient(self.var_sabati[giorno][vigile], 1)
+                            if giorno in self.var_sabati and vigile in self.var_sabati[giorno]:
+                                c.SetCoefficient(self.var_sabati[giorno][vigile], 1)
                             elif giorno in self.var_festivi and vigile in self.var_festivi[giorno] \
                                     and "FestiviComunque" not in self.DB[vigile].eccezioni:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile], 1)
@@ -466,23 +465,8 @@ class ILPTurnazione:
                         and vigile in self.var_festivi[compleanno]:
                     c.SetCoefficient(self.var_festivi[compleanno][vigile], 1)
 
-            # Somma servizi, costo e differenze per calcolo distribuzione equa
+            # Somma costo servizi per calcolo distribuzione equa
             if not self.DB[vigile].esente_servizi():
-                # VAR: somma servizi per vigile (ausiliaria)
-                self.var_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(),
-                                                                     f"var_aux_sum_servizi_vigile({vigile})")
-                # CONSTR: implementa quanto sopra
-                c = self.solver.Constraint(0, 0, f"constr_somma_servizi_vigile({vigile})")
-                c.SetCoefficient(self.var_servizi_vigile[vigile], -1)
-                for giorno in range(len(self.var_notti)):
-                    if vigile in self.var_notti[giorno]:
-                        c.SetCoefficient(self.var_notti[giorno][vigile], 1)
-                    if giorno in self.var_sabati:
-                        if vigile in self.var_sabati[giorno]:
-                            c.SetCoefficient(self.var_sabati[giorno][vigile], 1)
-                    if giorno in self.var_festivi:
-                        if vigile in self.var_festivi[giorno]:
-                            c.SetCoefficient(self.var_festivi[giorno][vigile], 1)
 
                 # VAR: costo servizi per vigile (ausiliaria)
                 self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(),
@@ -553,47 +537,70 @@ class ILPTurnazione:
                     if vigile in var:
                         c.SetCoefficient(var[vigile], 1)
 
-        # vigili = list(self.DB.keys())
-        # for i in range(len(self.DB)):
-        #     v1 = vigili[i]
-        #     if not self.DB[v1].esente_servizi():
-        #         for j in range(i + 1, len(vigili)):
-        #             v2 = vigili[j]
-        #             if not self.DB[v2].esente_servizi():
-        #                 # VAR: differenza numero servizi tra due vigili (ausiliaria)
-        #                 self.var_differenza_servizi[(v1, v2)] = self.solver.NumVar(-self.solver.infinity(),
-        #                                                                            self.solver.infinity(),
-        #                                                                            f"var_aux_diff_servizi({v1},{v2})")
-        #                 # CONSTR: implementa quanto sopra
-        #                 c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
-        #                                                 f"constr_diff_servizi_plus_vigili({v1},{v2})")
-        #                 c_plus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-        #                 c_plus.SetCoefficient(self.var_servizi_vigile[v1], 1)
-        #                 c_plus.SetCoefficient(self.var_servizi_vigile[v2], -1)
-        #                 # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v1], 1)
-        #                 # c_plus.SetCoefficient(self.var_cost_servizi_vigile[v2], -1)
-        #                 c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
-        #                                                  f"constr_diff_servizi_minus_vigili({v1},{v2})")
-        #                 c_minus.SetCoefficient(self.var_differenza_servizi[(v1, v2)], -1)
-        #                 c_minus.SetCoefficient(self.var_servizi_vigile[v1], -1)
-        #                 c_minus.SetCoefficient(self.var_servizi_vigile[v2], 1)
-        #                 # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v1], -1)
-        #                 # c_minus.SetCoefficient(self.var_cost_servizi_vigile[v2], 1)
+        # VAR: contatore servizi per mese (ausiliaria)
+        for vigile in self.DB:
+            self.var_cont_servizi_vigile_mese[vigile] = {}
+            for mese in range(1, 13+1):
+                self.var_cont_servizi_vigile_mese[vigile][mese] = \
+                    self.solver.IntVar(0, self.solver.infinity(), f"var_aux_diff_servizi_vigile({vigile})_mese({mese})")
+        # CONSTR: implementa quanto sopra
+        for vigile in self.var_cont_servizi_vigile_mese:
+            for mese in self.var_cont_servizi_vigile_mese[vigile]:
+                c = self.solver.Constraint(0, 0, f"var_diff_servizi_vigile({vigile})_mese({mese})")
+                c.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][mese], 1)
+                for giorno in range(len(self.var_notti)):
+                    mese_srv = self._get_date_from_offset(giorno).month + (
+                            self._get_date_from_offset(giorno).year - self.anno) * 12
+                    if mese_srv != mese:
+                        continue
+                    if vigile in self.var_notti[giorno]:
+                        c.SetCoefficient(self.var_notti[giorno][vigile], -1)
+                        if giorno in self.var_sabati and vigile in self.var_sabati[giorno]:
+                            c.SetCoefficient(self.var_sabati[giorno][vigile], -1)
+                        elif giorno in self.var_festivi and vigile in self.var_festivi[giorno] \
+                                and "FestiviComunque" not in self.DB[vigile].eccezioni:
+                            c.SetCoefficient(self.var_festivi[giorno][vigile], -1)
+
+        # Distribuisci servizi durante l'anno
+        # mesi = list(range(1, 13+1))
+        mesi = list(range(1, 13))
+        for vigile in self.var_cont_servizi_vigile_mese:
+            if self.DB[vigile].esente_servizi():
+                continue
+            self.var_diff_servizi_vigile_mesi[vigile] = {}
+            for i in mesi:
+                # for j in range(i + 1, len(mesi) + 1):
+                for j in [i + 1]:
+                    # VAR: differenza numero servizi tra due mesi (ausiliaria)
+                    self.var_diff_servizi_vigile_mesi[vigile][(i, j)] = \
+                        self.solver.NumVar(-self.solver.infinity(), self.solver.infinity(),
+                                           f"var_aux_diff_servizi_vigile({vigile})_mesi({i},{j})")
+                    # CONSTR: implementa quanto sopra
+                    c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
+                                                    f"constr_diff_servizi_plus_vigile({vigile})_mesi({i},{j})")
+                    c_plus.SetCoefficient(self.var_diff_servizi_vigile_mesi[vigile][(i, j)], -1)
+                    c_plus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][i], 1)
+                    c_plus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][j], -1)
+                    c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
+                                                     f"constr_diff_servizi_minus_vigile({vigile})_mesi({i},{j})")
+                    c_minus.SetCoefficient(self.var_diff_servizi_vigile_mesi[vigile][(i, j)], -1)
+                    c_minus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][i], -1)
+                    c_minus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][j], 1)
+
+        print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
 
         print("* Fase 3: definisco l'obiettivo...")
 
         # OBJECTIVE
         objective = self.solver.Objective()
-        # # OBJ: minimizza le differenze tra servizi - handled via constraint anyway
-        # for var in self.var_differenza_servizi.values():
-        #     objective.SetCoefficient(var, 1)
+        # OBJ: minimizza le differenze tra servizi di ciascun vigile mese per mese
+        for vigile in self.var_diff_servizi_vigile_mesi:
+            for var in self.var_diff_servizi_vigile_mesi[vigile].values():
+                objective.SetCoefficient(var, 1)
         # OBJ: minimizza il costo totale dei servizi
         for var in self.var_cost_servizi_vigile.values():
-            objective.SetCoefficient(var, (len(self.DB) - 1))
-        # TODO: OBJ: minimizza le differenze tra servizi di ciascun vigile mese per mese
+            objective.SetCoefficient(var, (len(self.DB) - 1) * 13)
         objective.SetMinimization()
-
-        print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
 
         model_f = open("model.txt", "w")
         model_f.write(self.solver.ExportModelAsLpFormat(False))
@@ -621,9 +628,14 @@ class ILPTurnazione:
 
     def print_solution(self):
         print()
-        if self.STATUS == pywraplp.Solver.INFEASIBLE:
+        if self.STATUS == pywraplp.Solver.NOT_SOLVED:
+            print('ATTENZIONE: non sono riuscito a calcolare una soluzione nel tempo concessomi.')
+            print("\tDammi più tempo e riprova.")
+            exit(0)
+        elif self.STATUS == pywraplp.Solver.INFEASIBLE:
             print('ATTENZIONE: Il problema non ammette soluzione.')
             print('\tRilassa i vincoli e riprova.')
+            exit(0)
         else:
             if self.STATUS == pywraplp.Solver.FEASIBLE:
                 print("ATTENZIONE: la soluzione trovata potrebbe non essere ottimale.")
@@ -671,37 +683,34 @@ class ILPTurnazione:
             print(f"Vigile designato per la notte di capodanno: {capodanno}")
 
     def save_solution(self):
-        if self.STATUS == pywraplp.Solver.INFEASIBLE:
-            return
-        else:
-            print("Salvo la soluzione trovata...")
-            for vigile in self.DB:
-                self.servizi_per_vigile[vigile] = []
-            for giorno in range(len(self.var_notti)):
-                data = self.data_inizio + dt.timedelta(giorno)
-                self.solution.append({
-                    'data': data,
-                    'notte': [],
-                    'notte_affiancamenti': [],
-                    'sabato': [],
-                    'sabato_affiancamenti': [],
-                    'festivo': [],
-                    'festivo_affiancamenti': [],
-                })
-                for vigile in self.var_notti[giorno]:
-                    if self.var_notti[giorno][vigile].solution_value() == 1:
-                        self.solution[giorno]['notte'].append(vigile)
-                        self.servizi_per_vigile[vigile].append((str(data) + " notte"))
-                if giorno in self.var_sabati:
-                    for vigile in self.var_sabati[giorno]:
-                        if self.var_sabati[giorno][vigile].solution_value() == 1:
-                            self.solution[giorno]['sabato'].append(vigile)
-                            self.servizi_per_vigile[vigile].append((str(data) + " sabato"))
-                elif giorno in self.var_festivi:
-                    for vigile in self.var_festivi[giorno]:
-                        if self.var_festivi[giorno][vigile].solution_value() == 1:
-                            self.solution[giorno]['festivo'].append(vigile)
-                            self.servizi_per_vigile[vigile].append((str(data) + " festivo"))
+        print("Salvo la soluzione trovata...")
+        for vigile in self.DB:
+            self.servizi_per_vigile[vigile] = []
+        for giorno in range(len(self.var_notti)):
+            data = self.data_inizio + dt.timedelta(giorno)
+            self.solution.append({
+                'data': data,
+                'notte': [],
+                'notte_affiancamenti': [],
+                'sabato': [],
+                'sabato_affiancamenti': [],
+                'festivo': [],
+                'festivo_affiancamenti': [],
+            })
+            for vigile in self.var_notti[giorno]:
+                if self.var_notti[giorno][vigile].solution_value() == 1:
+                    self.solution[giorno]['notte'].append(vigile)
+                    self.servizi_per_vigile[vigile].append((str(data) + " notte"))
+            if giorno in self.var_sabati:
+                for vigile in self.var_sabati[giorno]:
+                    if self.var_sabati[giorno][vigile].solution_value() == 1:
+                        self.solution[giorno]['sabato'].append(vigile)
+                        self.servizi_per_vigile[vigile].append((str(data) + " sabato"))
+            elif giorno in self.var_festivi:
+                for vigile in self.var_festivi[giorno]:
+                    if self.var_festivi[giorno][vigile].solution_value() == 1:
+                        self.solution[giorno]['festivo'].append(vigile)
+                        self.servizi_per_vigile[vigile].append((str(data) + " festivo"))
         return
 
     def _compute_servizi_speciali_onerosi(self):
