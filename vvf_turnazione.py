@@ -762,8 +762,10 @@ class ILPTurnazione:
         self._NOTTI_ONEROSE = list(map(self._get_offset_from_date, self._NOTTI_ONEROSE))
         self._FESTIVI_ONEROSI = [
             self._FESTIVI_SPECIALI[1],  # Pasqua
+            self._FESTIVI_SPECIALI[2],  # Pasquetta
             self._FESTIVI_SPECIALI[6],  # Ferragosto
             self._FESTIVI_SPECIALI[9],  # Natale
+            self._FESTIVI_SPECIALI[10],  # S. Stefano
             self._FESTIVI_SPECIALI[11],  # 1 Gennaio
         ]
 
