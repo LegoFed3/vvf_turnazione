@@ -542,11 +542,11 @@ class ILPTurnazione:
             self.var_cont_servizi_vigile_mese[vigile] = {}
             for mese in range(1, 13+1):
                 self.var_cont_servizi_vigile_mese[vigile][mese] = \
-                    self.solver.IntVar(0, self.solver.infinity(), f"var_aux_diff_servizi_vigile({vigile})_mese({mese})")
+                    self.solver.IntVar(0, self.solver.infinity(), f"var_aux_cont_servizi_vigile({vigile})_mese({mese})")
         # CONSTR: implementa quanto sopra
         for vigile in self.var_cont_servizi_vigile_mese:
             for mese in self.var_cont_servizi_vigile_mese[vigile]:
-                c = self.solver.Constraint(0, 0, f"var_diff_servizi_vigile({vigile})_mese({mese})")
+                c = self.solver.Constraint(0, 0, f"constr_cont_servizi_vigile({vigile})_mese({mese})")
                 c.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][mese], 1)
                 for giorno in range(len(self.var_notti)):
                     mese_srv = self._get_date_from_offset(giorno).month + (
@@ -562,30 +562,52 @@ class ILPTurnazione:
                             c.SetCoefficient(self.var_festivi[giorno][vigile], -1)
 
         # Distribuisci servizi durante l'anno
-        # mesi = list(range(1, 13+1))
-        mesi = list(range(1, 13))
         for vigile in self.var_cont_servizi_vigile_mese:
-            if self.DB[vigile].esente_servizi():
-                continue
-            self.var_diff_servizi_vigile_mesi[vigile] = {}
-            for i in mesi:
-                # for j in range(i + 1, len(mesi) + 1):
-                for j in [i + 1]:
-                    # VAR: differenza numero servizi tra due mesi (ausiliaria)
-                    self.var_diff_servizi_vigile_mesi[vigile][(i, j)] = \
-                        self.solver.NumVar(-self.solver.infinity(), self.solver.infinity(),
-                                           f"var_aux_diff_servizi_vigile({vigile})_mesi({i},{j})")
-                    # CONSTR: implementa quanto sopra
-                    c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
-                                                    f"constr_diff_servizi_plus_vigile({vigile})_mesi({i},{j})")
-                    c_plus.SetCoefficient(self.var_diff_servizi_vigile_mesi[vigile][(i, j)], -1)
-                    c_plus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][i], 1)
-                    c_plus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][j], -1)
-                    c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
-                                                     f"constr_diff_servizi_minus_vigile({vigile})_mesi({i},{j})")
-                    c_minus.SetCoefficient(self.var_diff_servizi_vigile_mesi[vigile][(i, j)], -1)
-                    c_minus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][i], -1)
-                    c_minus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][j], 1)
+            num_servizi_minimi = 0
+            num_servizi_per_mese = 0
+            num_mesi = 13
+            for mese in self.var_cont_servizi_vigile_mese[vigile]:
+                if f"NoServiziMese{mese}" in self.DB[vigile].eccezioni or (
+                        f"NoNottiMese{mese}" in self.DB[vigile].eccezioni and
+                        f"NoSabatiMese{mese}" in self.DB[vigile].eccezioni and
+                        f"NoFestiviMese{mese}" in self.DB[vigile].eccezioni
+                ):
+                    num_mesi -= 1
+            if not self.DB[vigile].esente_sabati():
+                num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
+            if not self.DB[vigile].esente_festivi():
+                num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
+            if not self.DB[vigile].esente_notti():
+                num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
+            if num_servizi_minimi > 0:
+                num_servizi_per_mese = math.ceil((num_servizi_minimi + 1) / num_mesi)
+            for mese in self.var_cont_servizi_vigile_mese[vigile]:
+                c = self.solver.Constraint(-self.solver.infinity(), num_servizi_per_mese,
+                                           f"constr_lim_servizi_vigile({vigile})_mese({mese})")
+                c.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][mese], 1)
+
+        # mesi = list(range(1, 13))
+        # for vigile in self.var_cont_servizi_vigile_mese:
+        #     if self.DB[vigile].esente_servizi():
+        #         continue
+        #     self.var_diff_servizi_vigile_mesi[vigile] = {}
+        #     for i in mesi:
+        #         for j in [i + 1]:
+        #             # VAR: differenza numero servizi tra due mesi (ausiliaria)
+        #             self.var_diff_servizi_vigile_mesi[vigile][(i, j)] = \
+        #                 self.solver.NumVar(-self.solver.infinity(), self.solver.infinity(),
+        #                                    f"constr_diff_servizi_vigile({vigile})_mesi({i},{j})")
+        #             # CONSTR: implementa quanto sopra
+        #             c_plus = self.solver.Constraint(-self.solver.infinity(), 0,
+        #                                             f"constr_diff_servizi_plus_vigile({vigile})_mesi({i},{j})")
+        #             c_plus.SetCoefficient(self.var_diff_servizi_vigile_mesi[vigile][(i, j)], -1)
+        #             c_plus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][i], 1)
+        #             c_plus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][j], -1)
+        #             c_minus = self.solver.Constraint(-self.solver.infinity(), 0,
+        #                                              f"constr_diff_servizi_minus_vigile({vigile})_mesi({i},{j})")
+        #             c_minus.SetCoefficient(self.var_diff_servizi_vigile_mesi[vigile][(i, j)], -1)
+        #             c_minus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][i], -1)
+        #             c_minus.SetCoefficient(self.var_cont_servizi_vigile_mese[vigile][j], 1)
 
         print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
 
