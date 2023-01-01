@@ -722,17 +722,17 @@ class ILPTurnazione:
             for vigile in self.var_notti[giorno]:
                 if self.var_notti[giorno][vigile].solution_value() == 1:
                     self.solution[giorno]['notte'].append(vigile)
-                    self.servizi_per_vigile[vigile].append((str(data) + " notte"))
+                    self.servizi_per_vigile[vigile].append((data.strftime("%d/%m/%Y") + " notte"))
             if giorno in self.var_sabati:
                 for vigile in self.var_sabati[giorno]:
                     if self.var_sabati[giorno][vigile].solution_value() == 1:
                         self.solution[giorno]['sabato'].append(vigile)
-                        self.servizi_per_vigile[vigile].append((str(data) + " sabato"))
+                        self.servizi_per_vigile[vigile].append((data.strftime("%d/%m/%Y") + " sabato"))
             elif giorno in self.var_festivi:
                 for vigile in self.var_festivi[giorno]:
                     if self.var_festivi[giorno][vigile].solution_value() == 1:
                         self.solution[giorno]['festivo'].append(vigile)
-                        self.servizi_per_vigile[vigile].append((str(data) + " festivo"))
+                        self.servizi_per_vigile[vigile].append((data.strftime("%d/%m/%Y") + " festivo"))
         return
 
     def _compute_servizi_speciali_onerosi(self):
