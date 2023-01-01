@@ -41,7 +41,7 @@ _ECCEZZIONI_VALIDE = [
     "NottiAncheFuoriSettimana",
     "FestiviComunque",
 ]
-for i in range(1, 12 + 1):
+for i in range(1, 13 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoNottiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoSabatiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoFestiviMese{i}")

@@ -405,7 +405,9 @@ class ILPTurnazione:
                 if len(mesi_da_saltare) > 0:
                     c = self.solver.Constraint(-self.solver.infinity(), 0, f"constr_ex_no_notti_mese({vigile})")
                     for giorno in self.var_notti:
-                        if self._get_date_from_offset(giorno).month in mesi_da_saltare:
+                        mese = self._get_date_from_offset(giorno).month + \
+                               (self._get_date_from_offset(giorno).year - self.anno) * 12
+                        if mese in mesi_da_saltare:
                             if vigile in self.var_notti[giorno]:
                                 c.SetCoefficient(self.var_notti[giorno][vigile], 1)
 
@@ -414,7 +416,9 @@ class ILPTurnazione:
                 if len(mesi_da_saltare) > 0:
                     c = self.solver.Constraint(-self.solver.infinity(), 0, f"constr_ex_no_sabati_mese({vigile})")
                     for giorno in self.var_sabati:
-                        if self._get_date_from_offset(giorno).month in mesi_da_saltare:
+                        mese = self._get_date_from_offset(giorno).month + \
+                               (self._get_date_from_offset(giorno).year - self.anno) * 12
+                        if mese in mesi_da_saltare:
                             if vigile in self.var_sabati[giorno]:
                                 c.SetCoefficient(self.var_sabati[giorno][vigile], 1)
 
@@ -423,7 +427,9 @@ class ILPTurnazione:
                 if len(mesi_da_saltare) > 0:
                     c = self.solver.Constraint(-self.solver.infinity(), 0, f"constr_ex_no_festivi_mese({vigile})")
                     for giorno in self.var_festivi:
-                        if self._get_date_from_offset(giorno).month in mesi_da_saltare:
+                        mese = self._get_date_from_offset(giorno).month + \
+                               (self._get_date_from_offset(giorno).year - self.anno) * 12
+                        if mese in mesi_da_saltare:
                             if vigile in self.var_festivi[giorno]:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile], 1)
 
@@ -434,7 +440,9 @@ class ILPTurnazione:
                     c = self.solver.Constraint(-self.solver.infinity(), 0,
                                                f"constr_ex_no_servizi_mese_vigile({vigile})")
                     for giorno in self.var_notti:
-                        if self._get_date_from_offset(giorno).month in mesi_da_saltare:
+                        mese = self._get_date_from_offset(giorno).month + \
+                               (self._get_date_from_offset(giorno).year - self.anno) * 12
+                        if mese in mesi_da_saltare:
                             if vigile in self.var_notti[giorno]:
                                 c.SetCoefficient(self.var_notti[giorno][vigile], 1)
                             if giorno in self.var_sabati:
@@ -582,6 +590,7 @@ class ILPTurnazione:
         # OBJ: minimizza il costo totale dei servizi
         for var in self.var_cost_servizi_vigile.values():
             objective.SetCoefficient(var, (len(self.DB) - 1))
+        # TODO: OBJ: minimizza le differenze tra servizi di ciascun vigile mese per mese
         objective.SetMinimization()
 
         print(f"\tIl modello ha {self.solver.NumVariables()} variabili e {self.solver.NumConstraints()} vincoli.")
