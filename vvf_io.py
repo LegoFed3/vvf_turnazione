@@ -238,9 +238,9 @@ def save_solution_to_files(model):
                 # Sabati e Festivi
                 frag = ""
                 for vigile in model.solution[giorno]['sabato']:
-                    frag = model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+                    frag += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
                 for vigile in model.solution[giorno]['festivo']:
-                    frag = model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
+                    frag += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
                 line += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
                 line += frag + ";" * (5 - len(frag.split(";")))
 

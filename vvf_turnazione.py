@@ -77,8 +77,6 @@ class ILPTurnazione:
         zero_vars = []
         giorno = 0
         settimana = 0
-        pers_festivo_tot = 0
-        num_festivi_estivi = 0
         pers_festivo = set()
         pers_notte = set()
         giorni_settimana = list(range(7))
@@ -149,17 +147,8 @@ class ILPTurnazione:
                                 zero_vars.append(self.var_festivi[curr_giorno][vigile])
                             pers_festivo.add(vigile)
 
-                    # CONSTR: personale minimo
-                    p = _MESE_TO_PERSONALE_FESTIVO[curr_data.month]
-                    pers_festivo_tot += p
-                    if p == 4:
-                        num_festivi_estivi += 1
-                    c = self.solver.Constraint(p, 4, f"constr_festivo({curr_giorno})_personale")
-                    for vigile in self.var_festivi[curr_giorno]:
-                        c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
-
-                    # CONTR: max 3/4 vigili non aspiranti
-                    c = self.solver.Constraint(3, p, f"constr_festivo({curr_giorno})_personale_non_aspirante")
+                    # CONSTR: 3 vigili non aspiranti
+                    c = self.solver.Constraint(3, 3, f"constr_festivo({curr_giorno})_personale_non_aspirante")
                     for vigile in self.var_festivi[curr_giorno]:
                         if self.DB[vigile].grado not in ["Aspirante", "Allievo"]:
                             c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
@@ -236,10 +225,8 @@ class ILPTurnazione:
         festivi_extra_tot = sum([v.delta_festivi for v in self.DB.values()])
         num_aspiranti_festivo = len([p for p in pers_festivo if self.DB[p].grado == "Aspirante"])
         num_vigili_festivo = len(pers_festivo) - num_aspiranti_festivo
-        media_festivi = pers_festivo_tot / (len(pers_festivo) - 1)  # -1 perchè comandante e vice ne fanno metà
         media_festivi = (len(self.var_festivi) * 3 - festivi_extra_tot  # numero vigili necessari
-                         + max(num_festivi_estivi - math.ceil(media_festivi) * num_aspiranti_festivo, 0)) / \
-                        (num_vigili_festivo - 1)  # -1 perchè comandante e vice ne fanno metà
+                        ) / (num_vigili_festivo - 1)  # -1 perchè comandante e vice ne fanno metà
         _NUM_MIN_FESTIVI = math.floor(media_festivi)
         _NUM_MAX_FESTIVI = math.ceil(media_festivi)
 
@@ -803,19 +790,4 @@ _GIORNO_TO_NUM = {
     "Ven": 4,
     "Sab": 5,
     "Dom": 6,
-}
-
-_MESE_TO_PERSONALE_FESTIVO = {
-    1: 3,
-    2: 3,
-    3: 3,
-    4: 3,
-    5: 4,
-    6: 4,
-    7: 4,
-    8: 4,
-    9: 4,
-    10: 4,
-    11: 3,
-    12: 3,
 }
