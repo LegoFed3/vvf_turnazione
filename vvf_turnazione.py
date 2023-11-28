@@ -763,9 +763,12 @@ class ILPTurnazione:
         self._FESTIVI_ONEROSI = [
             self._FESTIVI_SPECIALI[1],  # Pasqua
             self._FESTIVI_SPECIALI[2],  # Pasquetta
+            self._FESTIVI_SPECIALI[5],  # 2 Giugno
             self._FESTIVI_SPECIALI[6],  # Ferragosto
+            dt.date(self.anno, 12, 24),  # Vigilia di Natale (se festivo)
             self._FESTIVI_SPECIALI[9],  # Natale
             self._FESTIVI_SPECIALI[10],  # S. Stefano
+            dt.date(self.anno, 12, 31),  # 31 Dicembre (se festivo)
             self._FESTIVI_SPECIALI[11],  # 1 Gennaio
         ]
 
