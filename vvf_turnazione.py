@@ -269,7 +269,7 @@ class ILPTurnazione:
                     if vigile in self.var_sabati[sabato]:
                         c.SetCoefficient(self.var_sabati[sabato][vigile], 1)
 
-            # CONSTR: max 1 tra venerdì notte, sabato e sabato notte
+            # CONSTR: max 1 tra venerdì notte, sabato e sabato notte + giovedì notte, domenica notte
             if not self.DB[vigile].esente_sabati() and "NottiSoloSabatoFestivi" not in self.DB[vigile].eccezioni:
                 for sabato in self.var_sabati:
                     if vigile not in self.var_sabati[sabato]:
@@ -281,6 +281,10 @@ class ILPTurnazione:
                         c.SetCoefficient(self.var_notti[sabato][vigile], 1)
                     if vigile in self.var_notti[sabato - 1]:
                         c.SetCoefficient(self.var_notti[sabato - 1][vigile], 1)
+                    if vigile in self.var_notti[sabato + 1]:
+                        c.SetCoefficient(self.var_notti[sabato + 1][vigile], 1)
+                    if vigile in self.var_notti[sabato - 2]:
+                        c.SetCoefficient(self.var_notti[sabato - 2][vigile], 1)
 
             # CONSTR: max 1 tra sabato e festivi circostanti
             if not self.DB[vigile].esente_sabati() and not self.DB[vigile].esente_festivi():
@@ -296,7 +300,7 @@ class ILPTurnazione:
                         if (sabato + i) in self.var_festivi and vigile in self.var_festivi[sabato + i]:
                             c.SetCoefficient(self.var_festivi[sabato + i][vigile], 1)
 
-            # CONSTR: max 1 tra festivo e notti circostanti
+            # CONSTR: max 1 tra festivo e notti circostanti + venerdì, lunedì
             for festivo in self.var_festivi:
                 if (
                     "NottiSoloSabato" not in self.DB[vigile].eccezioni
@@ -311,9 +315,12 @@ class ILPTurnazione:
                     c.SetCoefficient(self.var_festivi[festivo][vigile], 1)
                     if vigile in self.var_notti[festivo]:
                         c.SetCoefficient(self.var_notti[festivo][vigile], 1)
-                    giorno_prima = festivo - 1
-                    if vigile in self.var_notti[giorno_prima]:
-                        c.SetCoefficient(self.var_notti[giorno_prima][vigile], 1)
+                    if vigile in self.var_notti[festivo - 1]:
+                        c.SetCoefficient(self.var_notti[festivo - 1][vigile], 1)
+                    if vigile in self.var_notti[festivo - 2]:
+                        c.SetCoefficient(self.var_notti[festivo - 2][vigile], 1)
+                    if (festivo + 1) < len(self.var_notti) and vigile in self.var_notti[festivo + 1]:
+                        c.SetCoefficient(self.var_notti[festivo + 1][vigile], 1)
 
             # CONSTR: max 1 notte in 4 giorni consecutivi
             for notte in self.var_notti:
