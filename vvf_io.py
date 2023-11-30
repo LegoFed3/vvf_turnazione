@@ -241,7 +241,6 @@ def save_solution_to_files(model):
                     frag += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
                 for vigile in model.solution[giorno]['festivo']:
                     frag += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
-                line += model.DB[vigile].nome + " " + model.DB[vigile].cognome + ";"
                 line += frag + ";" * (5 - len(frag.split(";")))
 
                 # Affiancamenti
@@ -259,7 +258,7 @@ def save_solution_to_files(model):
                 out.write("\n")
 
         # Riporta il numero di servizi extra ed i servizi speciali
-        with open(f"./riporti_{model.anno}.csv", "w") as out:
+        with open(f"./riporti_{model.anno + 1}.csv", "w") as out:
             out.write("#Vigile;Differenza vs. Media;Capodanno;Sabati;;;;;;;;;;Festivi Onerosi\n")
             for vigile in model.DB:
                 line = f"{vigile};"
@@ -371,5 +370,5 @@ def save_solution_to_files(model):
             out.write(cal.to_ical())
 
         print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.txt, icalendar_{model.anno}.ics "
-              f"e riporti_{model.anno}.csv.")
+              f"e riporti_{model.anno + 1}.csv.")
         return

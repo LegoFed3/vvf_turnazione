@@ -319,7 +319,7 @@ class ILPTurnazione:
                         c.SetCoefficient(self.var_notti[festivo - 1][vigile], 1)
                     if vigile in self.var_notti[festivo - 2]:
                         c.SetCoefficient(self.var_notti[festivo - 2][vigile], 1)
-                    if (festivo + 1) < len(self.var_notti) and vigile in self.var_notti[festivo + 1]:
+                    if festivo + 1 in self.var_notti and vigile in self.var_notti[festivo + 1]:
                         c.SetCoefficient(self.var_notti[festivo + 1][vigile], 1)
 
             # CONSTR: max 1 notte in 4 giorni consecutivi
@@ -335,12 +335,14 @@ class ILPTurnazione:
                     if notte + 3 in self.var_notti and vigile in self.var_notti[notte + 3]:
                         c.SetCoefficient(self.var_notti[notte + 3][vigile], 1)
 
-            # CONSTR: no festivi in settimane adiacenti
+            # CONSTR: no festivi in settimane adiacenti - mesi adiacenti per chi non ha richieste
             for festivo in self.var_festivi:
-                next_festivi = []
-                for i in range(1, 8):
-                    if festivo + i in self.var_festivi:
-                        next_festivi.append(festivo + i)
+                ha_richieste_speciali = any([True if ("NoFestiviMese" in e or "NoServiziMese" in e) else False
+                                             for e in self.DB[vigile].eccezioni])
+                if ha_richieste_speciali:
+                    next_festivi = [(festivo + i) for i in range(1, 8) if festivo + i in self.var_festivi]
+                else:
+                    next_festivi = [(festivo + i) for i in range(1, 30) if festivo + i in self.var_festivi]
                 if len(next_festivi) == 0:
                     continue
                 if vigile in self.var_festivi[festivo]:
