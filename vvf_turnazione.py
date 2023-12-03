@@ -147,8 +147,8 @@ class ILPTurnazione:
                                 zero_vars.append(self.var_festivi[curr_giorno][vigile])
                             pers_festivo.add(vigile)
 
-                    # CONSTR: 3 vigili non aspiranti
-                    c = self.solver.Constraint(3, 3, f"constr_festivo({curr_giorno})_personale_non_aspirante")
+                    # CONSTR: 3-4 vigili non aspiranti
+                    c = self.solver.Constraint(3, 4, f"constr_festivo({curr_giorno})_personale_non_aspirante")
                     for vigile in self.var_festivi[curr_giorno]:
                         if self.DB[vigile].grado not in ["Aspirante", "Allievo"]:
                             c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
@@ -225,8 +225,7 @@ class ILPTurnazione:
         festivi_extra_tot = sum([v.delta_festivi for v in self.DB.values()])
         num_aspiranti_festivo = len([p for p in pers_festivo if self.DB[p].grado == "Aspirante"])
         num_vigili_festivo = len(pers_festivo) - num_aspiranti_festivo
-        media_festivi = (len(self.var_festivi) * 3 - festivi_extra_tot  # numero vigili necessari
-                        ) / (num_vigili_festivo - 1)  # -1 perchè comandante e vice ne fanno metà
+        media_festivi = (len(self.var_festivi) * 3 - festivi_extra_tot) / num_vigili_festivo
         _NUM_MIN_FESTIVI = math.floor(media_festivi)
         _NUM_MAX_FESTIVI = math.ceil(media_festivi)
 
@@ -243,22 +242,17 @@ class ILPTurnazione:
 
             # CONSTR: numero notti
             if not self.DB[vigile].esente_notti():
-                notti_attese = round(_NUM_MEDIO_NOTTI) + self.DB[vigile].delta_notti
-                # if self.DB[vigile].delta_notti != 0 and notti_attese > _NUM_MEDIO_NOTTI:
-                #     print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, più della media ~{_NUM_MEDIO_NOTTI}.")
-                # elif self.DB[vigile].delta_notti != 0 and notti_attese < _NUM_MEDIO_NOTTI:
-                #     print(f"\t{self.DB[vigile]} avrà {notti_attese} notti, meno della media ~{_NUM_MEDIO_NOTTI}.")
+                notti_attese = _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
                 if self.DB[vigile].delta_notti != 0:
-                    c = self.solver.Constraint(notti_attese, notti_attese, f"constr_notti_totali({vigile})")
+                    c = self.solver.Constraint(notti_attese, notti_attese + 1, f"constr_notti_totali({vigile})")
                     for notte in self.var_notti:
                         if vigile in self.var_notti[notte]:
                             c.SetCoefficient(self.var_notti[notte][vigile], 1)
                 else:  # notti standard
-                    c = self.solver.Constraint(_NUM_MIN_NOTTI, _NUM_MAX_NOTTI + 1, f"constr_notti_totali({vigile})")
+                    c = self.solver.Constraint(_NUM_MIN_NOTTI, _NUM_MAX_NOTTI, f"constr_notti_totali({vigile})")
                     for notte in self.var_notti:
                         if vigile in self.var_notti[notte]:
                             c.SetCoefficient(self.var_notti[notte][vigile], 1)
-
 
             # CONSTR: numero sabati
             if not self.DB[vigile].esente_sabati():
@@ -268,6 +262,15 @@ class ILPTurnazione:
                 for sabato in self.var_sabati:
                     if vigile in self.var_sabati[sabato]:
                         c.SetCoefficient(self.var_sabati[sabato][vigile], 1)
+
+            # CONSTR: numero festivi
+            if not self.DB[vigile].esente_festivi():
+                c = self.solver.Constraint(_NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi,
+                                           _NUM_MAX_FESTIVI + self.DB[vigile].delta_festivi,
+                                           f"constr_festivi_vigile({vigile})")
+                for festivo in self.var_festivi:
+                    if vigile in self.var_festivi[festivo]:
+                        c.SetCoefficient(self.var_festivi[festivo][vigile], 1)
 
             # CONSTR: max 1 tra venerdì notte, sabato e sabato notte + giovedì notte, domenica notte
             if not self.DB[vigile].esente_sabati() and "NottiSoloSabatoFestivi" not in self.DB[vigile].eccezioni:
@@ -363,15 +366,6 @@ class ILPTurnazione:
                 if notte in self._NOTTI_ONEROSE:
                     if vigile in self.var_notti[notte]:
                         c.SetCoefficient(self.var_notti[notte][vigile], 1)
-
-            # CONSTR: numero festivi
-            if not self.DB[vigile].esente_festivi():
-                c = self.solver.Constraint(_NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi,
-                                           _NUM_MAX_FESTIVI + self.DB[vigile].delta_festivi,
-                                           f"constr_festivi_vigile({vigile})")
-                for festivo in self.var_festivi:
-                    if vigile in self.var_festivi[festivo]:
-                        c.SetCoefficient(self.var_festivi[festivo][vigile], 1)
 
             # ECCEZIONI alle regole usuali
             if len(self.DB[vigile].eccezioni) > 0:

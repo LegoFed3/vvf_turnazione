@@ -208,7 +208,7 @@ def read_csv_riporti(db, filename):
         return db
     df = pd.read_csv(filename, sep=";")
     for idx, row in df.iterrows():
-        id_vigile = row[0]
+        id_vigile = row.iloc[0]
         if id_vigile in db.keys():
             db[id_vigile].passato_servizi_extra = int(row[1])
             db[id_vigile].passato_capodanni = int(row[2])
