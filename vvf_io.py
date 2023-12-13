@@ -206,14 +206,18 @@ def read_csv_riporti(db, filename):
         print(f"ATTENZIONE: il file '{filename}' che descrive i riporti dello scorso anno non esiste!")
         print("\tContinuo senza.")
         return db
-    df = pd.read_csv(filename, sep=";")
-    for idx, row in df.iterrows():
-        id_vigile = row.iloc[0]
-        if id_vigile in db.keys():
-            db[id_vigile].passato_servizi_extra = int(row[1])
-            db[id_vigile].passato_capodanni = int(row[2])
-            db[id_vigile].passato_sabati = list(map(lambda x: int(x), row[3:13]))
-            db[id_vigile].passato_festivi_onerosi = list(map(lambda x: int(x), row[13:23]))
+    with open(filename) as rf:
+        for line in rf:
+            if line[0] == "#":
+                continue
+            line = line.split(";")
+            id_vigile = int(line[0])
+            if id_vigile in db.keys():
+                db[id_vigile].passato_servizi_extra = int(line[1])
+                db[id_vigile].passato_capodanni = int(line[2])
+                db[id_vigile].passato_sabati = list(map(lambda x: int(x), line[3:13]))
+                db[id_vigile].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:23]))
+
     return db
 
 
