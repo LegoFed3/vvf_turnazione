@@ -671,7 +671,8 @@ class ILPTurnazione:
                         self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())
                         if giorno == self._NOTTI_ONEROSE[2] and self.var_notti[giorno][vigile].solution_value() == 1:
                             self.DB[vigile].capodanno += 1
-                            capodanno = f"{ self.DB[vigile].nome} { self.DB[vigile].cognome}"
+                            capodanno = f"{self.DB[vigile].nome} {self.DB[vigile].cognome}" \
+                                        f" ({self.DB[vigile].passato_capodanni} precedenti)"
                         if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             self.DB[vigile].notti_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
                             servizi_fuori_squadra += int(self.var_notti[giorno][vigile].solution_value())
