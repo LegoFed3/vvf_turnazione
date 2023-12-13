@@ -8,6 +8,7 @@ import vvf_io
 class ILPTurnazione:
     # Collections
     giorno_squadra = {}
+    giorno_squadra_festivo = {}
     var_notti = {}
     var_sabati = {}
     var_festivi = {}
@@ -86,6 +87,10 @@ class ILPTurnazione:
                 curr_giorno = giorno + i
                 curr_data = self._get_date_from_offset(curr_giorno)
                 self.giorno_squadra[curr_giorno] = curr_squadra
+                self.giorno_squadra_festivo[curr_giorno] = curr_squadra
+                # Se lunedì è squadra precedente
+                if self._get_weekday_from_offset(curr_giorno) == 0:
+                    self.giorno_squadra_festivo[curr_giorno] = (curr_squadra - 2) % 4 + 1
 
                 # NOTTI
 
@@ -484,16 +489,20 @@ class ILPTurnazione:
                     if giorno in self.var_sabati:
                         if vigile in self.var_sabati[giorno]:
                             c.SetCoefficient(self.var_sabati[giorno][vigile],
-                                             2 * mul_bday * mul_squadra * mul_squadra * mul_sabati)
+                                             2 * mul_bday * mul_squadra**2 * mul_sabati)
                     if giorno in self.var_festivi:
+                        mul_squadra_festivo = 1
+                        # Se lunedì è squadra precedente
+                        if not (self.giorno_squadra_festivo[giorno] in self.DB[vigile].squadre):
+                            mul_squadra_festivo = 2  # Servizi NON di squadra costano di più
                         if vigile in self.var_festivi[giorno]:
                             # Base 1.5 per incoraggiare massima equità
                             if self.DB[vigile].grado == "Aspirante":
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                                 mul_bday * mul_squadra * mul_squadra - 1)
+                                                 mul_bday * mul_squadra_festivo**2 - 1)
                             else:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                                 1.5 * mul_bday * mul_squadra * mul_squadra + pen_festivi_onerosi)
+                                                 1.5 * mul_bday * mul_squadra_festivo**2 + pen_festivi_onerosi)
                     if vigile in self.var_notti[giorno]:
                         if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
                             c.SetCoefficient(self.var_notti[giorno][vigile],
@@ -679,7 +688,8 @@ class ILPTurnazione:
                         if giorno in self._FESTIVI_ONEROSI \
                                 and self.var_festivi[giorno][vigile].solution_value() == 1:
                             self.DB[vigile].festivi_onerosi += 1
-                        if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
+                        if self.giorno_squadra_festivo[giorno] not in self.DB[vigile].squadre \
+                                and self.DB[vigile].haSquadra():
                             self.DB[vigile].festivi_fuori_squadra += \
                                 int(self.var_festivi[giorno][vigile].solution_value())
                             servizi_fuori_squadra += int(self.var_festivi[giorno][vigile].solution_value())
