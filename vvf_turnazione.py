@@ -682,7 +682,7 @@ class ILPTurnazione:
                         if self.giorno_squadra[giorno] not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             self.DB[vigile].sabati_fuori_squadra += \
                                 int(self.var_sabati[giorno][vigile].solution_value())
-                            servizi_fuori_squadra +=  int(self.var_sabati[giorno][vigile].solution_value())
+                            servizi_fuori_squadra += int(self.var_sabati[giorno][vigile].solution_value())
                 for giorno in self.var_festivi:
                     if vigile in self.var_festivi[giorno]:
                         self.DB[vigile].festivi += int(self.var_festivi[giorno][vigile].solution_value())

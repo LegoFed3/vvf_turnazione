@@ -133,7 +133,8 @@ class Vigile:
                 or "EsenteSabati" in self.eccezioni)
 
     def esente_festivi(self):
-        return self.esente_servizi() or "Aspettativa" in self.eccezioni or "EsenteFestivi" in self.eccezioni
+        return (self.esente_servizi() or "Aspettativa" in self.eccezioni or "EsenteFestivi" in self.eccezioni
+                or self.grado == "Aspirante")
 
     def graduato(self):
         return self.grado in ["Comandante", "Vicecomandante", "Capoplotone", "Caposquadra"]
