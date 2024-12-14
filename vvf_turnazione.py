@@ -514,27 +514,27 @@ class ILPTurnazione:
                             c.SetCoefficient(self.var_notti[giorno][vigile],
                                              1 * mul_bday * mul_squadra + pen_notti_onerose)
 
-        # CONSTR: numero servizi uguale per tutti +/- 1
-        for vigile in self.DB:
-            if self.DB[vigile].esente_servizi():
-                continue
-            num_servizi_minimi = 0
-            if not self.DB[vigile].esente_sabati():
-                num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
-            if not self.DB[vigile].esente_festivi():
-                num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
-            if not self.DB[vigile].esente_notti():
-                num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
-            if self.DB[vigile].grado != "Aspirante":
-                c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
-                                           f"constr_servizi_totali_vigile({vigile})")
-            else:
-                c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
-                                           f"constr_servizi_totali_vigile({vigile})")
-            for collection in [self.var_notti, self.var_sabati, self.var_festivi]:
-                for var in collection.values():
-                    if vigile in var:
-                        c.SetCoefficient(var[vigile], 1)
+        # # CONSTR: numero servizi uguale per tutti +/- 1
+        # for vigile in self.DB:
+        #     if self.DB[vigile].esente_servizi():
+        #         continue
+        #     num_servizi_minimi = 0
+        #     if not self.DB[vigile].esente_sabati():
+        #         num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
+        #     if not self.DB[vigile].esente_festivi():
+        #         num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
+        #     if not self.DB[vigile].esente_notti():
+        #         num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
+        #     if self.DB[vigile].grado != "Aspirante":
+        #         c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
+        #                                    f"constr_servizi_totali_vigile({vigile})")
+        #     else:
+        #         c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
+        #                                    f"constr_servizi_totali_vigile({vigile})")
+        #     for collection in [self.var_notti, self.var_sabati, self.var_festivi]:
+        #         for var in collection.values():
+        #             if vigile in var:
+        #                 c.SetCoefficient(var[vigile], 1)
 
         # VAR: contatore servizi per mese (ausiliaria)
         for vigile in self.DB:
