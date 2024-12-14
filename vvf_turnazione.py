@@ -525,12 +525,14 @@ class ILPTurnazione:
         #         num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
         #     if not self.DB[vigile].esente_notti():
         #         num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
-        #     if self.DB[vigile].grado != "Aspirante":
-        #         c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
-        #                                    f"constr_servizi_totali_vigile({vigile})")
-        #     else:
-        #         c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
-        #                                    f"constr_servizi_totali_vigile({vigile})")
+        #     # if self.DB[vigile].grado != "Aspirante":
+        #     #     c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
+        #     #                                f"constr_servizi_totali_vigile({vigile})")
+        #     # else:
+        #     #     c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
+        #     #                                f"constr_servizi_totali_vigile({vigile})")
+        #     c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
+        #                                f"constr_servizi_totali_vigile({vigile})")
         #     for collection in [self.var_notti, self.var_sabati, self.var_festivi]:
         #         for var in collection.values():
         #             if vigile in var:
@@ -697,8 +699,14 @@ class ILPTurnazione:
                 line = str(self.DB[vigile])
                 line += f": {self.DB[vigile].notti + self.DB[vigile].sabati + self.DB[vigile].festivi}"
                 line += f"\n\tNotti: {self.DB[vigile].notti} ({self.DB[vigile].notti_fuori_squadra})"
+                if self.DB[vigile].delta_notti != 0:
+                    line += f" [Delta: {self.DB[vigile].delta_notti}]"
                 line += f"\n\tSabati: {self.DB[vigile].sabati} ({self.DB[vigile].sabati_fuori_squadra})"
+                if self.DB[vigile].delta_sabati != 0:
+                    line += f" [Delta: {self.DB[vigile].delta_sabati}]"
                 line += f"\n\tFestivi: {self.DB[vigile].festivi} ({self.DB[vigile].festivi_fuori_squadra})"
+                if self.DB[vigile].delta_festivi!= 0:
+                    line += f" [Delta: {self.DB[vigile].delta_festivi}]"
                 if len(self.DB[vigile].eccezioni) > 0:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
                 print(line)
