@@ -80,6 +80,7 @@ class ILPTurnazione:
         giorno = 0
         settimana = 0
         pers_festivo = set()
+        pers_sabato = set()
         pers_notte = set()
         giorni_settimana = list(range(7))
         while giorno < num_giorni:
@@ -129,6 +130,7 @@ class ILPTurnazione:
                         ):
                             self.var_sabati[curr_giorno][vigile] = \
                                 self.solver.IntVar(0, 1, f"var_vigile({vigile})_sabato({curr_giorno})")
+                            pers_sabato.add(vigile)
 
                     # CONSTR: 1 vigile per sabato
                     c = self.solver.Constraint(1, 1, f"constr_sabato({curr_giorno})")
@@ -153,8 +155,8 @@ class ILPTurnazione:
                                 zero_vars.append(self.var_festivi[curr_giorno][vigile])
                             pers_festivo.add(vigile)
 
-                    # CONSTR: 3-4 vigili non aspiranti
-                    c = self.solver.Constraint(3, 4, f"constr_festivo({curr_giorno})_personale_non_aspirante")
+                    # CONSTR: 3 vigili non aspiranti
+                    c = self.solver.Constraint(3, 3, f"constr_festivo({curr_giorno})_personale_non_aspirante")
                     for vigile in self.var_festivi[curr_giorno]:
                         if self.DB[vigile].grado not in ["Aspirante", "Allievo"]:
                             c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
@@ -208,34 +210,33 @@ class ILPTurnazione:
               f"e {len(self.var_festivi)} festivi.")
 
         notti_extra_tot = sum([v.delta_notti for v in self.DB.values()])
-        _NUM_PERS_NOTTI = st.mean([len(self.var_notti[k]) for k in self.var_notti.keys()])  # Persone per notte
+        # _NUM_PERS_NOTTI = st.mean([len(self.var_notti[k]) for k in self.var_notti.keys()])  # Persone per notte
+        _NUM_PERS_NOTTI = len(pers_notte)
         _NUM_MEDIO_NOTTI = (len(self.var_notti) - notti_extra_tot) / _NUM_PERS_NOTTI
         _NUM_MIN_NOTTI = math.floor(_NUM_MEDIO_NOTTI)
-        _NUM_MAX_NOTTI = _NUM_MIN_NOTTI + 1
+        _NUM_MAX_NOTTI = math.ceil(_NUM_MEDIO_NOTTI)
 
-        print(f"\tCon in media {_NUM_PERS_NOTTI} vigili che svolgono notti ({notti_extra_tot} extra) "
+        print(f"\tCon {_NUM_PERS_NOTTI} vigili che svolgono notti ({notti_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_NOTTI}-{_NUM_MAX_NOTTI} notti a testa.")
 
-        # _NUM_PERS_SABATI = len(self.var_sabati[list(self.var_sabati.keys())[0]])  # First key
         sabati_extra_tot = sum([v.delta_sabati for v in self.DB.values()])
-        _NUM_PERS_SABATI = st.mean([len(self.var_sabati[k]) for k in self.var_sabati.keys()])
-        _NUM_MIN_SABATI = 0
-        _NUM_MAX_SABATI = 1
-        if math.floor(_NUM_PERS_SABATI) < len(self.var_sabati) - sabati_extra_tot:
-            media_sabati = len(self.var_sabati) / _NUM_PERS_SABATI
-            _NUM_MIN_SABATI = math.floor(media_sabati)
-            _NUM_MAX_SABATI = math.ceil(media_sabati)
+        # _NUM_PERS_SABATI = st.mean([len(self.var_sabati[k]) for k in self.var_sabati.keys()])
+        _NUM_PERS_SABATI = len(pers_sabato)
+        _NUM_MEDIO_SABATI = (len(self.var_sabati) - sabati_extra_tot) / _NUM_PERS_SABATI
+        _NUM_MIN_SABATI = math.floor(_NUM_MEDIO_SABATI)
+        _NUM_MAX_SABATI = math.ceil(_NUM_MEDIO_SABATI)
 
-        print(f"\tCon in media {_NUM_PERS_SABATI} vigili che svolgono sabati ({sabati_extra_tot} extra) "
+        print(f"\tCon {_NUM_PERS_SABATI} vigili che svolgono sabati ({sabati_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_SABATI}-{_NUM_MAX_SABATI} sabati a testa.")
 
         festivi_extra_tot = sum([v.delta_festivi for v in self.DB.values()])
-        _NUM_PERS_FESTIVI = st.mean([len(self.var_festivi[k]) for k in self.var_festivi.keys()])
-        media_festivi = (len(self.var_festivi) * 3 - festivi_extra_tot) / _NUM_PERS_FESTIVI
-        _NUM_MIN_FESTIVI = math.floor(media_festivi)
-        _NUM_MAX_FESTIVI = math.ceil(media_festivi)
+        # _NUM_PERS_FESTIVI = st.mean([len(self.var_festivi[k]) for k in self.var_festivi.keys()])
+        _NUM_PERS_FESTIVI = len(pers_festivo)
+        _NUM_MEDIO_FESTIVI = (len(self.var_festivi) * 3 - festivi_extra_tot) / _NUM_PERS_FESTIVI
+        _NUM_MIN_FESTIVI = math.floor(_NUM_MEDIO_FESTIVI)
+        _NUM_MAX_FESTIVI = math.ceil(_NUM_MEDIO_FESTIVI)
 
-        print(f"\tCon in media {_NUM_PERS_FESTIVI} vigili che svolgono festivi ({festivi_extra_tot} extra) "
+        print(f"\tCon {_NUM_PERS_FESTIVI} vigili che svolgono festivi ({festivi_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_FESTIVI}-{_NUM_MAX_FESTIVI} festivi a testa.")
 
         self._SERVIZI_MINIMI = _NUM_MIN_NOTTI + _NUM_MIN_SABATI + _NUM_MIN_FESTIVI
@@ -248,22 +249,17 @@ class ILPTurnazione:
 
             # CONSTR: numero notti
             if not self.DB[vigile].esente_notti():
-                notti_attese = _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
-                if self.DB[vigile].delta_notti != 0:
-                    c = self.solver.Constraint(notti_attese, notti_attese + 1, f"constr_notti_totali({vigile})")
-                    for notte in self.var_notti:
-                        if vigile in self.var_notti[notte]:
-                            c.SetCoefficient(self.var_notti[notte][vigile], 1)
-                else:  # notti standard
-                    c = self.solver.Constraint(_NUM_MIN_NOTTI, _NUM_MAX_NOTTI, f"constr_notti_totali({vigile})")
-                    for notte in self.var_notti:
-                        if vigile in self.var_notti[notte]:
-                            c.SetCoefficient(self.var_notti[notte][vigile], 1)
+                c = self.solver.Constraint(_NUM_MIN_NOTTI + self.DB[vigile].delta_notti,
+                                           _NUM_MAX_NOTTI + self.DB[vigile].delta_notti,
+                                           f"constr_notti_totali({vigile})")
+                for notte in self.var_notti:
+                    if vigile in self.var_notti[notte]:
+                        c.SetCoefficient(self.var_notti[notte][vigile], 1)
 
             # CONSTR: numero sabati
             if not self.DB[vigile].esente_sabati():
-                sabati_extra = self.DB[vigile].delta_sabati
-                c = self.solver.Constraint(_NUM_MIN_SABATI + sabati_extra, _NUM_MAX_SABATI + sabati_extra,
+                c = self.solver.Constraint(_NUM_MIN_SABATI + self.DB[vigile].delta_sabati,
+                                           _NUM_MAX_SABATI + self.DB[vigile].delta_sabati,
                                            f"constr_sabati_vigile({vigile})")
                 for sabato in self.var_sabati:
                     if vigile in self.var_sabati[sabato]:
@@ -525,19 +521,16 @@ class ILPTurnazione:
         for vigile in self.DB:
             if self.DB[vigile].esente_servizi():
                 continue
-            num_servizi_minimi = 0
+            num_servizi_medi = 0
             if not self.DB[vigile].esente_notti():
-                num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
+                num_servizi_medi += _NUM_MEDIO_NOTTI + self.DB[vigile].delta_notti
             if not self.DB[vigile].esente_sabati():
-                num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
+                num_servizi_medi += _NUM_MEDIO_SABATI + self.DB[vigile].delta_sabati
             if not self.DB[vigile].esente_festivi():
-                num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
+                num_servizi_medi += _NUM_MEDIO_FESTIVI + self.DB[vigile].delta_festivi
             if self.DB[vigile].grado != "Aspirante":
-                c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
+                c = self.solver.Constraint(math.floor(num_servizi_medi), math.ceil(num_servizi_medi),
                                            f"constr_servizi_totali_vigile({vigile})")
-            # else:
-            #     c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
-            #                                f"constr_servizi_totali_vigile({vigile})")
             for collection in [
                 self.var_notti,
                 self.var_sabati,
