@@ -1,7 +1,6 @@
 # from __future__ import print_function
 from ortools.linear_solver import pywraplp
 import datetime as dt
-import statistics as st
 import math
 import vvf_io
 
@@ -99,12 +98,13 @@ class ILPTurnazione:
                 # VAR: vigili di squadra candidati per la notte
                 self.var_notti[curr_giorno] = {}
                 for vigile in self.DB:
-                    if (not self.DB[vigile].esente_notti()
-                        and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                        and f"NoNottiMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                        and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
-                             or curr_data == dt.date(self.anno, 12, 31)  # Tutti candidati per capodanno
-                             or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni or loose)
+                    if (
+                            not self.DB[vigile].esente_notti()
+                            and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
+                            and f"NoNottiMese{curr_data.month}" not in self.DB[vigile].eccezioni
+                            and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                                 or curr_data == dt.date(self.anno, 12, 31)  # Tutti candidati per capodanno
+                                 or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni or loose)
                     ):
                         self.var_notti[curr_giorno][vigile] = \
                             self.solver.IntVar(0, 1, f"var_vigile({vigile})_notte({curr_giorno})")
@@ -123,10 +123,11 @@ class ILPTurnazione:
                     # VAR: vigili candidati per il sabato
                     self.var_sabati[curr_giorno] = {}
                     for vigile in self.DB:
-                        if (not self.DB[vigile].esente_sabati()
-                            and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                            and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
-                                 or loose)
+                        if (
+                                not self.DB[vigile].esente_sabati()
+                                and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
+                                and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                                     or loose)
                         ):
                             self.var_sabati[curr_giorno][vigile] = \
                                 self.solver.IntVar(0, 1, f"var_vigile({vigile})_sabato({curr_giorno})")
@@ -144,10 +145,11 @@ class ILPTurnazione:
                     # VAR: vigili candidati per il festivo
                     self.var_festivi[curr_giorno] = {}
                     for vigile in self.DB:
-                        if (not self.DB[vigile].esente_festivi()
-                            and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                            and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
-                                 or loose)
+                        if (
+                                not self.DB[vigile].esente_festivi()
+                                and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
+                                and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                                     or loose)
                         ):
                             self.var_festivi[curr_giorno][vigile] = \
                                 self.solver.IntVar(0, 1, f"var_vigile({vigile})_festivo({curr_giorno})")
@@ -404,7 +406,8 @@ class ILPTurnazione:
                                 c.SetCoefficient(self.var_notti[giorno][vigile], 1)
 
                 # CONSTR_EX: no sabati specifico mese
-                mesi_da_saltare = [int(e[len("NoSabatiMese"):]) for e in self.DB[vigile].eccezioni if "NoSabatiMese" in e]
+                mesi_da_saltare = [int(e[len("NoSabatiMese"):]) for e in self.DB[vigile].eccezioni
+                                   if "NoSabatiMese" in e]
                 if len(mesi_da_saltare) > 0:
                     c = self.solver.Constraint(-self.solver.infinity(), 0, f"constr_ex_no_sabati_mese({vigile})")
                     for giorno in self.var_sabati:
@@ -415,7 +418,8 @@ class ILPTurnazione:
                                 c.SetCoefficient(self.var_sabati[giorno][vigile], 1)
 
                 # CONSTR_EX: no festivi specifico mese
-                mesi_da_saltare = [int(e[len("NoFestiviMese"):]) for e in self.DB[vigile].eccezioni if "NoFestiviMese" in e]
+                mesi_da_saltare = [int(e[len("NoFestiviMese"):]) for e in self.DB[vigile].eccezioni
+                                   if "NoFestiviMese" in e]
                 if len(mesi_da_saltare) > 0:
                     c = self.solver.Constraint(-self.solver.infinity(), 0, f"constr_ex_no_festivi_mese({vigile})")
                     for giorno in self.var_festivi:
@@ -464,14 +468,14 @@ class ILPTurnazione:
                 self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(),
                                                                           f"var_aux_cost_servizi_vigile({vigile})")
                 # CONSTR: implementa quanto sopra
-                MUL_NOTTI = 1
-                MUL_SABATI = 2
-                MUL_FESTIVI = 1.5
+                _MUL_NOTTI = 1
+                _MUL_SABATI = 2
+                _MUL_FESTIVI = 1.5
                 cnst = 0
                 # cnst += -2 * self.DB[vigile].passato_servizi_extra
-                cnst += self.DB[vigile].delta_notti * MUL_NOTTI
-                cnst += self.DB[vigile].delta_sabati * MUL_SABATI
-                cnst += self.DB[vigile].delta_festivi * MUL_FESTIVI
+                cnst += self.DB[vigile].delta_notti * _MUL_NOTTI
+                cnst += self.DB[vigile].delta_sabati * _MUL_SABATI
+                cnst += self.DB[vigile].delta_festivi * _MUL_FESTIVI
                 c = self.solver.Constraint(cnst, cnst, f"constr_costo_servizi_vigile({vigile})")
                 c.SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
                 mul_sabati = 1 + sum(self.DB[vigile].passato_sabati)  # Sabati più probabili se pochi in anni recenti
@@ -492,7 +496,7 @@ class ILPTurnazione:
                     if giorno in self.var_sabati:
                         if vigile in self.var_sabati[giorno]:
                             c.SetCoefficient(self.var_sabati[giorno][vigile],
-                                             MUL_SABATI * mul_bday * mul_squadra**2 * mul_sabati)
+                                             _MUL_SABATI * mul_bday * mul_squadra**2 * mul_sabati)
                     if giorno in self.var_festivi:
                         mul_squadra_festivo = 1
                         # Se lunedì è squadra precedente
@@ -505,7 +509,7 @@ class ILPTurnazione:
                                                  mul_bday * mul_squadra_festivo**2 - 1)
                             else:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                                 MUL_FESTIVI * mul_bday * mul_squadra_festivo**2 + pen_festivi_onerosi)
+                                                 _MUL_FESTIVI * mul_bday * mul_squadra_festivo**2 + pen_festivi_onerosi)
                     if vigile in self.var_notti[giorno]:
                         if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
                             c.SetCoefficient(self.var_notti[giorno][vigile],
@@ -515,7 +519,7 @@ class ILPTurnazione:
                                     or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
                                 mul_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
                             c.SetCoefficient(self.var_notti[giorno][vigile],
-                                             MUL_NOTTI * mul_bday * mul_squadra + pen_notti_onerose)
+                                             _MUL_NOTTI * mul_bday * mul_squadra + pen_notti_onerose)
 
         # CONSTR: numero servizi uguale per tutti +/- 1
         for vigile in self.DB:
@@ -531,14 +535,14 @@ class ILPTurnazione:
             if self.DB[vigile].grado != "Aspirante":
                 c = self.solver.Constraint(math.floor(num_servizi_medi), math.ceil(num_servizi_medi),
                                            f"constr_servizi_totali_vigile({vigile})")
-            for collection in [
-                self.var_notti,
-                self.var_sabati,
-                self.var_festivi
-            ]:
-                for var in collection.values():
-                    if vigile in var:
-                        c.SetCoefficient(var[vigile], 1)
+                for collection in [
+                    self.var_notti,
+                    self.var_sabati,
+                    self.var_festivi
+                ]:
+                    for var in collection.values():
+                        if vigile in var:
+                            c.SetCoefficient(var[vigile], 1)
 
         # VAR: contatore servizi per mese (ausiliaria)
         for vigile in self.DB:
@@ -707,7 +711,7 @@ class ILPTurnazione:
                 if self.DB[vigile].delta_sabati != 0:
                     line += f" [Delta: {self.DB[vigile].delta_sabati}]"
                 line += f"\n\tFestivi: {self.DB[vigile].festivi} ({self.DB[vigile].festivi_fuori_squadra})"
-                if self.DB[vigile].delta_festivi!= 0:
+                if self.DB[vigile].delta_festivi != 0:
                     line += f" [Delta: {self.DB[vigile].delta_festivi}]"
                 if len(self.DB[vigile].eccezioni) > 0:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
