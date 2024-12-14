@@ -1,6 +1,7 @@
 # from __future__ import print_function
 from ortools.linear_solver import pywraplp
 import datetime as dt
+import statistics as st
 import math
 import vvf_io
 
@@ -164,11 +165,11 @@ class ILPTurnazione:
                         if self.DB[vigile].autista:
                             c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
 
-                    # CONST: max 1 aspirante
-                    c = self.solver.Constraint(-self.solver.infinity(), 1, f"constr_festivo({curr_giorno})_aspirante")
-                    for vigile in self.var_festivi[curr_giorno]:
-                        if self.DB[vigile].grado == "Aspirante":
-                            c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
+                    # # CONST: max 1 aspirante
+                    # c = self.solver.Constraint(-self.solver.infinity(), 1, f"constr_festivo({curr_giorno})_aspirante")
+                    # for vigile in self.var_festivi[curr_giorno]:
+                    #     if self.DB[vigile].grado == "Aspirante":
+                    #         c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
 
             # CONSTR: max 1 notte per vigile a settimana
             # Max 2+ se fa notti extra o solo in alcuni giorni
@@ -181,7 +182,6 @@ class ILPTurnazione:
                 lim_mesi = len([e for e in self.DB[vigile].eccezioni if "NoNottiMese" in e])
                 if (
                         "NottiSoloSabatoFestivi" in self.DB[vigile].eccezioni
-                        # or self.DB[vigile].esenteCP()
                         or lim_giorni >= 4
                         or lim_mesi >= 4
                 ):
@@ -208,34 +208,35 @@ class ILPTurnazione:
               f"e {len(self.var_festivi)} festivi.")
 
         notti_extra_tot = sum([v.delta_notti for v in self.DB.values()])
-        _NUM_MEDIO_NOTTI = (len(self.var_notti) - notti_extra_tot) / len(pers_notte)
+        _NUM_PERS_NOTTI = st.mean([len(self.var_notti[k]) for k in self.var_notti.keys()])  # Persone per notte
+        _NUM_MEDIO_NOTTI = (len(self.var_notti) - notti_extra_tot) / _NUM_PERS_NOTTI
         _NUM_MIN_NOTTI = math.floor(_NUM_MEDIO_NOTTI)
         _NUM_MAX_NOTTI = _NUM_MIN_NOTTI + 1
 
-        print(f"\tCon {len(pers_notte)} vigili che svolgono notti ({notti_extra_tot} extra) "
+        print(f"\tCon in media {_NUM_PERS_NOTTI} vigili che svolgono notti ({notti_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_NOTTI}-{_NUM_MAX_NOTTI} notti a testa.")
 
-        _NUM_PERS_SABATI = len(self.var_sabati[5])  # Giorno 5 è sabato perchè 0 è lunedì
+        # _NUM_PERS_SABATI = len(self.var_sabati[list(self.var_sabati.keys())[0]])  # First key
         sabati_extra_tot = sum([v.delta_sabati for v in self.DB.values()])
+        _NUM_PERS_SABATI = st.mean([len(self.var_sabati[k]) for k in self.var_sabati.keys()])
         _NUM_MIN_SABATI = 0
         _NUM_MAX_SABATI = 1
-        if _NUM_PERS_SABATI < len(self.var_sabati) - sabati_extra_tot:
+        if math.floor(_NUM_PERS_SABATI) < len(self.var_sabati) - sabati_extra_tot:
             media_sabati = len(self.var_sabati) / _NUM_PERS_SABATI
             _NUM_MIN_SABATI = math.floor(media_sabati)
             _NUM_MAX_SABATI = math.ceil(media_sabati)
 
-        print(f"\tCon {_NUM_PERS_SABATI} vigili che svolgono sabati ({sabati_extra_tot} extra) "
+        print(f"\tCon in media {_NUM_PERS_SABATI} vigili che svolgono sabati ({sabati_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_SABATI}-{_NUM_MAX_SABATI} sabati a testa.")
 
         festivi_extra_tot = sum([v.delta_festivi for v in self.DB.values()])
-        num_aspiranti_festivo = len([p for p in pers_festivo if self.DB[p].grado == "Aspirante"])
-        num_vigili_festivo = len(pers_festivo) - num_aspiranti_festivo
-        media_festivi = (len(self.var_festivi) * 3 - festivi_extra_tot) / num_vigili_festivo
+        _NUM_PERS_FESTIVI = st.mean([len(self.var_festivi[k]) for k in self.var_festivi.keys()])
+        media_festivi = (len(self.var_festivi) * 3 - festivi_extra_tot) / _NUM_PERS_FESTIVI
         _NUM_MIN_FESTIVI = math.floor(media_festivi)
         _NUM_MAX_FESTIVI = math.ceil(media_festivi)
 
-        print(f"\tCon {num_vigili_festivo} vigili e {num_aspiranti_festivo} aspiranti che svolgono festivi "
-              f"({festivi_extra_tot} extra) assegnerò {_NUM_MIN_FESTIVI}-{_NUM_MAX_FESTIVI} festivi a testa.")
+        print(f"\tCon in media {_NUM_PERS_FESTIVI} vigili che svolgono festivi ({festivi_extra_tot} extra) "
+              f"assegnerò {_NUM_MIN_FESTIVI}-{_NUM_MAX_FESTIVI} festivi a testa.")
 
         self._SERVIZI_MINIMI = _NUM_MIN_NOTTI + _NUM_MIN_SABATI + _NUM_MIN_FESTIVI
 
@@ -467,9 +468,15 @@ class ILPTurnazione:
                 self.var_cost_servizi_vigile[vigile] = self.solver.NumVar(0, self.solver.infinity(),
                                                                           f"var_aux_cost_servizi_vigile({vigile})")
                 # CONSTR: implementa quanto sopra
-                c = -2 * self.DB[vigile].passato_servizi_extra + self.DB[vigile].delta_notti + \
-                    self.DB[vigile].delta_sabati + self.DB[vigile].delta_festivi
-                c = self.solver.Constraint(c, c, f"constr_costo_servizi_vigile({vigile})")
+                MUL_NOTTI = 1
+                MUL_SABATI = 2
+                MUL_FESTIVI = 1.5
+                cnst = 0
+                # cnst += -2 * self.DB[vigile].passato_servizi_extra
+                cnst += self.DB[vigile].delta_notti * MUL_NOTTI
+                cnst += self.DB[vigile].delta_sabati * MUL_SABATI
+                cnst += self.DB[vigile].delta_festivi * MUL_FESTIVI
+                c = self.solver.Constraint(cnst, cnst, f"constr_costo_servizi_vigile({vigile})")
                 c.SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
                 mul_sabati = 1 + sum(self.DB[vigile].passato_sabati)  # Sabati più probabili se pochi in anni recenti
                 compleanno = self.DB[vigile].offset_compleanno(self.data_inizio)
@@ -489,7 +496,7 @@ class ILPTurnazione:
                     if giorno in self.var_sabati:
                         if vigile in self.var_sabati[giorno]:
                             c.SetCoefficient(self.var_sabati[giorno][vigile],
-                                             2 * mul_bday * mul_squadra**2 * mul_sabati)
+                                             MUL_SABATI * mul_bday * mul_squadra**2 * mul_sabati)
                     if giorno in self.var_festivi:
                         mul_squadra_festivo = 1
                         # Se lunedì è squadra precedente
@@ -502,7 +509,7 @@ class ILPTurnazione:
                                                  mul_bday * mul_squadra_festivo**2 - 1)
                             else:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
-                                                 1.5 * mul_bday * mul_squadra_festivo**2 + pen_festivi_onerosi)
+                                                 MUL_FESTIVI * mul_bday * mul_squadra_festivo**2 + pen_festivi_onerosi)
                     if vigile in self.var_notti[giorno]:
                         if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
                             c.SetCoefficient(self.var_notti[giorno][vigile],
@@ -512,31 +519,33 @@ class ILPTurnazione:
                                     or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
                                 mul_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
                             c.SetCoefficient(self.var_notti[giorno][vigile],
-                                             1 * mul_bday * mul_squadra + pen_notti_onerose)
+                                             MUL_NOTTI * mul_bday * mul_squadra + pen_notti_onerose)
 
-        # # CONSTR: numero servizi uguale per tutti +/- 1
-        # for vigile in self.DB:
-        #     if self.DB[vigile].esente_servizi():
-        #         continue
-        #     num_servizi_minimi = 0
-        #     if not self.DB[vigile].esente_sabati():
-        #         num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
-        #     if not self.DB[vigile].esente_festivi():
-        #         num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
-        #     if not self.DB[vigile].esente_notti():
-        #         num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
-        #     # if self.DB[vigile].grado != "Aspirante":
-        #     #     c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
-        #     #                                f"constr_servizi_totali_vigile({vigile})")
-        #     # else:
-        #     #     c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
-        #     #                                f"constr_servizi_totali_vigile({vigile})")
-        #     c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
-        #                                f"constr_servizi_totali_vigile({vigile})")
-        #     for collection in [self.var_notti, self.var_sabati, self.var_festivi]:
-        #         for var in collection.values():
-        #             if vigile in var:
-        #                 c.SetCoefficient(var[vigile], 1)
+        # CONSTR: numero servizi uguale per tutti +/- 1
+        for vigile in self.DB:
+            if self.DB[vigile].esente_servizi():
+                continue
+            num_servizi_minimi = 0
+            if not self.DB[vigile].esente_notti():
+                num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
+            if not self.DB[vigile].esente_sabati():
+                num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
+            if not self.DB[vigile].esente_festivi():
+                num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
+            if self.DB[vigile].grado != "Aspirante":
+                c = self.solver.Constraint(num_servizi_minimi, num_servizi_minimi + 1,
+                                           f"constr_servizi_totali_vigile({vigile})")
+            # else:
+            #     c = self.solver.Constraint(num_servizi_minimi + 1, num_servizi_minimi + 1,
+            #                                f"constr_servizi_totali_vigile({vigile})")
+            for collection in [
+                self.var_notti,
+                self.var_sabati,
+                self.var_festivi
+            ]:
+                for var in collection.values():
+                    if vigile in var:
+                        c.SetCoefficient(var[vigile], 1)
 
         # VAR: contatore servizi per mese (ausiliaria)
         for vigile in self.DB:
