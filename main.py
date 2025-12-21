@@ -39,6 +39,9 @@ class VVFParser(argparse.ArgumentParser):
         self.add_argument("-o", "--organico-fn", type=str,
                           help="path to CSV containing the available firemen (Default: organico.csv)",
                           default="./organico.csv")
+        self.add_argument("-p", "--piano-cs", type=str,
+                          help="path to CSV containing planned CS shifts (Default: None)",
+                          default=None)
         self.add_argument("-r", "--riporti-fn", type=str,
                           help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
                           default="./riporti.csv")
@@ -55,10 +58,10 @@ args = parser.parse_args()
 
 print(
     "  __     ____     _______   _____                           _                   \n"
-    "  \ \   / /\ \   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  \n"
-    "   \ \ / /  \ \ / /| |_      | || | | | '__| '_ \ / _` |_  / |/ _ \| '_ \ / _ \ \n"
-    "    \ V /    \ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ \n"
-    "     \_/      \_/  |_|       |_| \__,_|_|  |_| |_|\__,_/___|_|\___/|_| |_|\___| \n"
+    "  \\ \\   / /\\ \\   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  \n"
+    "   \\ \\ / /  \\ \\ / /| |_      | || | | | '__| '_ \\ / _` |_  / |/ _ \\| '_ \\ / _ \\ \n"
+    "    \\ V /    \\ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ \n"
+    "     \\_/      \\_/  |_|       |_| \\__,_|_|  |_| |_|\\__,_/___|_|\\___/|_| |_|\\___| \n"
     "                                                                                \n"
 )
 print(f"Random seed: {args.seed}\n")
@@ -66,10 +69,15 @@ print(f"Random seed: {args.seed}\n")
 model = vvf_turnazione.ILPTurnazione(args)
 model.solve()
 
-model = vvf_affiancamenti.ILPAffiancamenti(model)
-model.solve()
+# model = vvf_affiancamenti.ILPAffiancamenti(model)
+# model.solve()
 
 vvf_io.save_solution_to_files(model)
 
 t1 = time.time()
 print("Soluzione trovata in {0:.2f} secondi.".format(t1 - t0))
+
+
+# partenza 12/01
+# parte squadra 3
+# 

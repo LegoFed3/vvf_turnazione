@@ -9,6 +9,7 @@ class ILPTurnazione:
     # Collections
     giorno_squadra = {}
     giorno_squadra_festivo = {}
+    giorno_squadra_cs = {}
     var_notti = {}
     var_sabati = {}
     var_festivi = {}
@@ -16,8 +17,9 @@ class ILPTurnazione:
     var_cont_servizi_vigile_mese = {}
     var_diff_servizi_vigile_mesi = {}
 
-    DB = {}
+    DB: dict[int, vvf_io.Vigile] = {}
     vigili_squadra = {}
+    cs_squadra  ={}
     anno = 0
     data_inizio = 0
     data_fine = 0
@@ -56,15 +58,24 @@ class ILPTurnazione:
         self._compute_servizi_speciali_onerosi()
         self.DB = vvf_io.read_csv_vigili(args.organico_fn)
         self.DB = vvf_io.read_csv_riporti(self.DB, args.riporti_fn)
+        self.settimana_cs_map = vvf_io.read_csv_cs(args.piano_cs)
         self.vigili_squadra = {}
         for vigile in self.DB:
             # Squadra
             for squadra in self.DB[vigile].squadre:
-                if squadra == 0:
-                    continue
-                elif squadra not in self.vigili_squadra:
-                    self.vigili_squadra[squadra] = []
-                self.vigili_squadra[squadra].append(vigile)
+                if isinstance(squadra, str) and squadra.startswith("CS"):
+                    # Special CS shifts
+                    if squadra in self.cs_squadra:
+                        print(f"ERROR: CS '{squadra}' appears multiple times in input file!")
+                        exit(-1)
+                    self.cs_squadra[squadra] = vigile
+                else:
+                    squadra = int(squadra)
+                    if squadra == 0:
+                        continue
+                    elif squadra not in self.vigili_squadra:
+                        self.vigili_squadra[squadra] = []
+                    self.vigili_squadra[squadra].append(vigile)
 
         num_squadre = len(self.vigili_squadra)
         num_giorni = self._get_offset_from_date(self.data_fine)
@@ -78,6 +89,7 @@ class ILPTurnazione:
         zero_vars = []
         giorno = 0
         settimana = 0
+        curr_cs = self.settimana_cs_map[settimana]
         pers_festivo = set()
         pers_sabato = set()
         pers_notte = set()
@@ -92,6 +104,7 @@ class ILPTurnazione:
                 # Se lunedì è squadra precedente
                 if self._get_weekday_from_offset(curr_giorno) == 0:
                     self.giorno_squadra_festivo[curr_giorno] = (curr_squadra - 2) % 4 + 1
+                self.giorno_squadra_cs[curr_giorno] = curr_cs
 
                 # NOTTI
 
@@ -102,13 +115,15 @@ class ILPTurnazione:
                             not self.DB[vigile].esente_notti()
                             and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
                             and f"NoNottiMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                            and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                            and (curr_squadra in self.DB[vigile].squadre
+                                 or 0 in self.DB[vigile].squadre
+                                 or curr_cs in self.DB[vigile].squadre
                                  or curr_data == dt.date(self.anno, 12, 31)  # Tutti candidati per capodanno
                                  or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni or loose)
                     ):
                         self.var_notti[curr_giorno][vigile] = \
                             self.solver.IntVar(0, 1, f"var_vigile({vigile})_notte({curr_giorno})")
-                        if curr_squadra not in self.DB[vigile].squadre:
+                        if curr_squadra not in self.DB[vigile].squadre and curr_cs not in self.DB[vigile].squadre:
                             zero_vars.append(self.var_notti[curr_giorno][vigile])
                         pers_notte.add(vigile)
 
@@ -126,7 +141,9 @@ class ILPTurnazione:
                         if (
                                 not self.DB[vigile].esente_sabati()
                                 and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                                and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                                and (curr_squadra in self.DB[vigile].squadre
+                                     or 0 in self.DB[vigile].squadre
+                                     or curr_cs in self.DB[vigile].squadre
                                      or loose)
                         ):
                             self.var_sabati[curr_giorno][vigile] = \
@@ -148,12 +165,14 @@ class ILPTurnazione:
                         if (
                                 not self.DB[vigile].esente_festivi()
                                 and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                                and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                                and (curr_squadra in self.DB[vigile].squadre
+                                     or 0 in self.DB[vigile].squadre
+                                     or curr_cs in self.DB[vigile].squadre
                                      or loose)
                         ):
                             self.var_festivi[curr_giorno][vigile] = \
                                 self.solver.IntVar(0, 1, f"var_vigile({vigile})_festivo({curr_giorno})")
-                            if curr_squadra not in self.DB[vigile].squadre:
+                            if curr_squadra not in self.DB[vigile].squadre and curr_cs not in self.DB[vigile].squadre:
                                 zero_vars.append(self.var_festivi[curr_giorno][vigile])
                             pers_festivo.add(vigile)
 
@@ -168,12 +187,6 @@ class ILPTurnazione:
                     for vigile in self.var_festivi[curr_giorno]:
                         if self.DB[vigile].autista:
                             c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
-
-                    # # CONST: max 1 aspirante
-                    # c = self.solver.Constraint(-self.solver.infinity(), 1, f"constr_festivo({curr_giorno})_aspirante")
-                    # for vigile in self.var_festivi[curr_giorno]:
-                    #     if self.DB[vigile].grado == "Aspirante":
-                    #         c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
 
             # CONSTR: max 1 notte per vigile a settimana
             # Max 2+ se fa notti extra o solo in alcuni giorni
@@ -202,6 +215,7 @@ class ILPTurnazione:
             curr_squadra = (curr_squadra % num_squadre) + 1
             giorno += len(giorni_settimana)
             settimana += 1
+            curr_cs = self.settimana_cs_map[settimana]
 
         # Inizializza soluzione per notti fuori squadra a 0
         if len(zero_vars) > 0:
@@ -491,7 +505,9 @@ class ILPTurnazione:
                         pen_notti_onerose = 1
                     if giorno in self._FESTIVI_ONEROSI:
                         pen_festivi_onerosi = 2 + sum(self.DB[vigile].passato_festivi_onerosi)
-                    if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre):
+                    if not (self.giorno_squadra[giorno] in self.DB[vigile].squadre
+                            or 0 in self.DB[vigile].squadre
+                            or self.giorno_squadra_cs[giorno] in self.DB[vigile].squadre):
                         mul_squadra = 2  # Servizi NON di squadra costano di più
                     if giorno in self.var_sabati:
                         if vigile in self.var_sabati[giorno]:
@@ -587,7 +603,7 @@ class ILPTurnazione:
             if not self.DB[vigile].esente_notti():
                 num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
             if num_servizi_minimi > 0:
-                num_servizi_per_mese = math.ceil((num_servizi_minimi + 1) / num_mesi)
+                num_servizi_per_mese = math.ceil((num_servizi_minimi + 1) / num_mesi) + 1  # At least a couple...
             for mese in self.var_cont_servizi_vigile_mese[vigile]:
                 c = self.solver.Constraint(-self.solver.infinity(), num_servizi_per_mese,
                                            f"constr_lim_servizi_vigile({vigile})_mese({mese})")
@@ -628,7 +644,7 @@ class ILPTurnazione:
                 objective.SetCoefficient(var, 1)
         # OBJ: minimizza il costo totale dei servizi
         for var in self.var_cost_servizi_vigile.values():
-            objective.SetCoefficient(var, (len(self.DB) - 1) * 13)
+            objective.SetCoefficient(var, (len(self.DB) - 1) * 13 * 5)
         objective.SetMinimization()
 
         model_f = open("model.txt", "w")
