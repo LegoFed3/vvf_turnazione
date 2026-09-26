@@ -603,7 +603,8 @@ class ILPTurnazione:
             if not self.DB[vigile].esente_notti():
                 num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
             if num_servizi_minimi > 0:
-                num_servizi_per_mese = math.ceil((num_servizi_minimi + 1) / num_mesi) + 1  # At least a couple...
+                num_servizi_per_mese = math.ceil((num_servizi_minimi + 1) / num_mesi)
+                num_servizi_per_mese = max(num_servizi_per_mese, 2)  # At least a couple...
             for mese in self.var_cont_servizi_vigile_mese[vigile]:
                 c = self.solver.Constraint(-self.solver.infinity(), num_servizi_per_mese,
                                            f"constr_lim_servizi_vigile({vigile})_mese({mese})")
