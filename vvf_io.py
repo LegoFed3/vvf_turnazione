@@ -48,9 +48,6 @@ for i in range(1, 13 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoServiziMese{i}")
 
 
-_DEFAULT_SQUADRA = [0]
-
-
 class Vigile:
     id = 0
     nome = ""
@@ -85,9 +82,9 @@ class Vigile:
         self.autista = autista == 'y'
         self.istruttore_allievi = istruttore == 'y'
         if len(squadre) > 0:
-            self.squadre = [int(s) if s.isdigit() else s for s in squadre.split(",")]
+            self.squadre = list(map(int, squadre.split(",")))
         else:
-            self.squadre = _DEFAULT_SQUADRA
+            self.squadre = [0]
         if len(dn) > 0:
             self.delta_notti = int(dn)
         if len(ds) > 0:
@@ -103,15 +100,15 @@ class Vigile:
             print("ERRORE! Grado sconosciuto: ", self.grado)
             exit(-1)
         if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
-            self.squadre = _DEFAULT_SQUADRA
+            self.squadre = [0]
         for e in self.eccezioni:
             if e not in _ECCEZZIONI_VALIDE:
                 print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
                 exit(-1)
-        if "Aspettativa" in self.eccezioni and self.squadre != _DEFAULT_SQUADRA:
+        if "Aspettativa" in self.eccezioni and self.squadre != [0]:
             print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")
-            self.squadre = _DEFAULT_SQUADRA
+            self.squadre = [0]
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
@@ -150,14 +147,14 @@ class Vigile:
                 or "Resp. Allievi" in self.eccezioni)
 
     def membro_direttivo(self):
-        return (self.grado in ["Comandante", "Vicecomandante", "Capoplotone"]
+        return (self.grado in ["Comandante", "Vicecomandante", "Caposquadra"]
                 or "Segretario" in self.eccezioni
                 or "Cassiere" in self.eccezioni
                 or "Magazziniere" in self.eccezioni
                 or "Vicemagazziniere" in self.eccezioni)
 
     def haSquadra(self):
-        return 0 not in self.squadre and self.grado != "Caposquadra"
+        return 0 not in self.squadre
 
     def offset_compleanno(self, data_inizio):
         if (
@@ -223,19 +220,6 @@ def read_csv_riporti(db, filename):
                 db[id_vigile].passato_festivi_onerosi = list(map(lambda x: int(x), line[13:23]))
 
     return db
-
-def read_csv_cs(filename):
-    if filename is None:
-        res = {
-            i: None for i in range(53) # 53 weeks, to be safe
-        }
-    else:
-        print(f"\tLeggo file monte CS {filename}...")
-        df = pd.read_csv(filename, header=None)
-        res = df[0].to_dict()
-    # Add one empty week at the end
-    res[len(res)] = None
-    return res
 
 
 def save_solution_to_files(model):
