@@ -66,8 +66,8 @@ print(f"Random seed: {args.seed}\n")
 model = vvf_turnazione.ILPTurnazione(args)
 model.solve()
 
-model = vvf_affiancamenti.ILPAffiancamenti(model)
-model.solve()
+# model = vvf_affiancamenti.ILPAffiancamenti(model)
+# model.solve()
 
 vvf_io.save_solution_to_files(model)
 

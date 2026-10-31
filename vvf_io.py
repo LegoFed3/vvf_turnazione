@@ -18,6 +18,7 @@ _GRADI_VALIDI = [
 ]
 
 _ECCEZZIONI_VALIDE = [
+    "TODO", # Placeholder
     # Cariche
     "Segretario",
     "Cassiere",
@@ -46,6 +47,9 @@ for i in range(1, 13 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoSabatiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoFestiviMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoServiziMese{i}")
+
+
+_DEFAULT_SQUADRA = [0]
 
 
 class Vigile:
@@ -84,7 +88,7 @@ class Vigile:
         if len(squadre) > 0:
             self.squadre = list(map(int, squadre.split(",")))
         else:
-            self.squadre = [0]
+            self.squadre = _DEFAULT_SQUADRA
         if len(dn) > 0:
             self.delta_notti = int(dn)
         if len(ds) > 0:
@@ -100,15 +104,15 @@ class Vigile:
             print("ERRORE! Grado sconosciuto: ", self.grado)
             exit(-1)
         if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
-            self.squadre = [0]
+            self.squadre = _DEFAULT_SQUADRA
         for e in self.eccezioni:
             if e not in _ECCEZZIONI_VALIDE:
                 print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
                 exit(-1)
-        if "Aspettativa" in self.eccezioni and self.squadre != [0]:
+        if "Aspettativa" in self.eccezioni and self.squadre != _DEFAULT_SQUADRA:
             print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")
-            self.squadre = [0]
+            self.squadre = _DEFAULT_SQUADRA
 
     def __str__(self):  # Called by print()
         s = "{:03d} {}".format(self.id, self.grado)
@@ -147,7 +151,7 @@ class Vigile:
                 or "Resp. Allievi" in self.eccezioni)
 
     def membro_direttivo(self):
-        return (self.grado in ["Comandante", "Vicecomandante", "Caposquadra"]
+        return (self.grado in ["Comandante", "Vicecomandante", "Capoplotone"]
                 or "Segretario" in self.eccezioni
                 or "Cassiere" in self.eccezioni
                 or "Magazziniere" in self.eccezioni

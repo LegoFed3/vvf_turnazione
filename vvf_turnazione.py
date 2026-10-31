@@ -16,7 +16,7 @@ class ILPTurnazione:
     var_cont_servizi_vigile_mese = {}
     var_diff_servizi_vigile_mesi = {}
 
-    DB = {}
+    DB: dict[int, vvf_io.Vigile] = {}
     vigili_squadra = {}
     anno = 0
     data_inizio = 0
@@ -762,6 +762,7 @@ class ILPTurnazione:
             dt.date(self.anno, 5, 1),  # 1 Maggio
             dt.date(self.anno, 6, 2),  # 2 Giugno
             dt.date(self.anno, 8, 15),  # Ferragosto
+            dt.date(self.anno, 10, 4),  # 4 Ottobre
             dt.date(self.anno, 11, 1),  # 1 Novembre
             dt.date(self.anno, 12, 8),  # 8 Dicembre
             dt.date(self.anno, 12, 25),  # Natale
