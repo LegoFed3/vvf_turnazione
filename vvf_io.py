@@ -109,6 +109,8 @@ class Vigile:
             if e not in _ECCEZZIONI_VALIDE:
                 print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
                 exit(-1)
+            elif e == "TODO":
+                print(f"ATTENZIONE: il vigile {self.id} ha un eccezione TODO!")
         if "Aspettativa" in self.eccezioni and self.squadre != _DEFAULT_SQUADRA:
             print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")
@@ -156,6 +158,9 @@ class Vigile:
                 or "Cassiere" in self.eccezioni
                 or "Magazziniere" in self.eccezioni
                 or "Vicemagazziniere" in self.eccezioni)
+
+    def graduato_per_festivo(self):
+        return (self.grado in ["Vicecomandante", "Capoplotone", "Caposquadra"])
 
     def haSquadra(self):
         return 0 not in self.squadre

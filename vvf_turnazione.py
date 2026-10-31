@@ -175,6 +175,13 @@ class ILPTurnazione:
                     #     if self.DB[vigile].grado == "Aspirante":
                     #         c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
 
+                    # CONSTR: dal 2027 se domenica un graduato (vicecomandante, capo*)
+                    if curr_data.weekday() == 6:
+                        c = self.solver.Constraint(1, self.solver.infinity(), f"constr_festivo({curr_giorno})_graduato_domenica")
+                        for vigile in self.var_festivi[curr_giorno]:
+                            if self.DB[vigile].graduato_per_festivo():
+                                c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
+
             # CONSTR: max 1 notte per vigile a settimana
             # Max 2+ se fa notti extra o solo in alcuni giorni
             c_notti_settimana_vigile = {}
