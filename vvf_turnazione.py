@@ -67,6 +67,11 @@ class ILPTurnazione:
             print(f"ERRORE: squadra iniziale {curr_squadra} inesistente!")
             exit(-1)
 
+        # Dal 2027 i graduati che coprono le domeniche non fanno sabati (compensati con festivi, vedi sotto)
+        for v in self.DB.values():
+            if v.graduato_per_festivo() and not v.esente_festivi() and not v.esente_sabati():
+                v.cede_sabati = True
+
         print("* Fase 1: creo possibilità...")
 
         zero_vars = []
@@ -170,8 +175,8 @@ class ILPTurnazione:
                     #     if self.DB[vigile].grado == "Aspirante":
                     #         c.SetCoefficient(self.var_festivi[curr_giorno][vigile], 1)
 
-                    # CONSTR: dal 2027 se domenica un graduato (vicecomandante, capo*)
-                    if curr_data.weekday() == 6:
+                    # CONSTR: dal 2027 se domenica (non festivo speciale) un graduato (vicecomandante, capo*)
+                    if self._richiede_graduato(curr_giorno):
                         c = self.solver.Constraint(1, self.solver.infinity(), f"constr_festivo({curr_giorno})_graduato_domenica")
                         for vigile in self.var_festivi[curr_giorno]:
                             if self.DB[vigile].graduato_per_festivo():
@@ -215,34 +220,36 @@ class ILPTurnazione:
         print(f"\tL'anno avrà {len(self.var_notti)} notti, {len(self.var_sabati)} sabati "
               f"e {len(self.var_festivi)} festivi.")
 
-        notti_extra_tot = sum([v.delta_notti for v in self.DB.values()])
-        # _NUM_PERS_NOTTI = st.mean([len(self.var_notti[k]) for k in self.var_notti.keys()])  # Persone per notte
-        _NUM_PERS_NOTTI = len(pers_notte)
-        _NUM_MEDIO_NOTTI = (len(self.var_notti) - notti_extra_tot) / _NUM_PERS_NOTTI
-        _NUM_MIN_NOTTI = math.floor(_NUM_MEDIO_NOTTI)
-        _NUM_MAX_NOTTI = math.ceil(_NUM_MEDIO_NOTTI)
-
-        print(f"\tCon {_NUM_PERS_NOTTI} vigili che svolgono notti ({notti_extra_tot} extra) "
-              f"assegnerò {_NUM_MIN_NOTTI}-{_NUM_MAX_NOTTI} notti a testa.")
-
-        sabati_extra_tot = sum([v.delta_sabati for v in self.DB.values()])
+        sabati_extra_tot = sum([v.extra_sabati() for v in self.DB.values()])
         # _NUM_PERS_SABATI = st.mean([len(self.var_sabati[k]) for k in self.var_sabati.keys()])
         _NUM_PERS_SABATI = len(pers_sabato)
         _NUM_MEDIO_SABATI = (len(self.var_sabati) - sabati_extra_tot) / _NUM_PERS_SABATI
         _NUM_MIN_SABATI = math.floor(_NUM_MEDIO_SABATI)
         _NUM_MAX_SABATI = math.ceil(_NUM_MEDIO_SABATI)
 
+        self._calcola_scambio_graduati(pers_festivo, _NUM_MEDIO_SABATI)
+
+        notti_extra_tot = sum([v.extra_notti() for v in self.DB.values()])
+        # _NUM_PERS_NOTTI = st.mean([len(self.var_notti[k]) for k in self.var_notti.keys()])  # Persone per notte
+        _NUM_PERS_NOTTI = len(pers_notte)
+        _NUM_MEDIO_NOTTI = (len(self.var_notti) - notti_extra_tot) / _NUM_PERS_NOTTI
+        _NUM_MIN_NOTTI = math.floor(_NUM_MEDIO_NOTTI)
+        _NUM_MAX_NOTTI = math.ceil(_NUM_MEDIO_NOTTI)
+
+        print(f"\tCon {_NUM_PERS_NOTTI} vigili che svolgono notti ({notti_extra_tot:g} extra) "
+              f"assegnerò {_NUM_MIN_NOTTI}-{_NUM_MAX_NOTTI} notti a testa.")
+
         print(f"\tCon {_NUM_PERS_SABATI} vigili che svolgono sabati ({sabati_extra_tot} extra) "
               f"assegnerò {_NUM_MIN_SABATI}-{_NUM_MAX_SABATI} sabati a testa.")
 
-        festivi_extra_tot = sum([v.delta_festivi for v in self.DB.values()])
+        festivi_extra_tot = sum([v.extra_festivi() for v in self.DB.values()])
         # _NUM_PERS_FESTIVI = st.mean([len(self.var_festivi[k]) for k in self.var_festivi.keys()])
         _NUM_PERS_FESTIVI = len(pers_festivo)
         _NUM_MEDIO_FESTIVI = (len(self.var_festivi) * 3 - festivi_extra_tot) / _NUM_PERS_FESTIVI
         _NUM_MIN_FESTIVI = math.floor(_NUM_MEDIO_FESTIVI)
         _NUM_MAX_FESTIVI = math.ceil(_NUM_MEDIO_FESTIVI)
 
-        print(f"\tCon {_NUM_PERS_FESTIVI} vigili che svolgono festivi ({festivi_extra_tot} extra) "
+        print(f"\tCon {_NUM_PERS_FESTIVI} vigili che svolgono festivi ({festivi_extra_tot:g} extra) "
               f"assegnerò {_NUM_MIN_FESTIVI}-{_NUM_MAX_FESTIVI} festivi a testa.")
 
         self._SERVIZI_MINIMI = _NUM_MIN_NOTTI + _NUM_MIN_SABATI + _NUM_MIN_FESTIVI
@@ -255,8 +262,8 @@ class ILPTurnazione:
 
             # CONSTR: numero notti
             if not self.DB[vigile].esente_notti():
-                c = self.solver.Constraint(_NUM_MIN_NOTTI + self.DB[vigile].delta_notti,
-                                           _NUM_MAX_NOTTI + self.DB[vigile].delta_notti,
+                c = self.solver.Constraint(_floor(_NUM_MEDIO_NOTTI + self.DB[vigile].extra_notti()),
+                                           _ceil(_NUM_MEDIO_NOTTI + self.DB[vigile].extra_notti()),
                                            f"constr_notti_totali({vigile})")
                 for notte in self.var_notti:
                     if vigile in self.var_notti[notte]:
@@ -264,8 +271,8 @@ class ILPTurnazione:
 
             # CONSTR: numero sabati
             if not self.DB[vigile].esente_sabati():
-                c = self.solver.Constraint(_NUM_MIN_SABATI + self.DB[vigile].delta_sabati,
-                                           _NUM_MAX_SABATI + self.DB[vigile].delta_sabati,
+                c = self.solver.Constraint(_floor(_NUM_MEDIO_SABATI + self.DB[vigile].extra_sabati()),
+                                           _ceil(_NUM_MEDIO_SABATI + self.DB[vigile].extra_sabati()),
                                            f"constr_sabati_vigile({vigile})")
                 for sabato in self.var_sabati:
                     if vigile in self.var_sabati[sabato]:
@@ -273,8 +280,8 @@ class ILPTurnazione:
 
             # CONSTR: numero festivi
             if not self.DB[vigile].esente_festivi():
-                c = self.solver.Constraint(_NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi,
-                                           _NUM_MAX_FESTIVI + self.DB[vigile].delta_festivi,
+                c = self.solver.Constraint(_floor(_NUM_MEDIO_FESTIVI + self.DB[vigile].extra_festivi()),
+                                           _ceil(_NUM_MEDIO_FESTIVI + self.DB[vigile].extra_festivi()),
                                            f"constr_festivi_vigile({vigile})")
                 for festivo in self.var_festivi:
                     if vigile in self.var_festivi[festivo]:
@@ -477,9 +484,9 @@ class ILPTurnazione:
                 _MUL_FESTIVI = 1.5
                 cnst = 0
                 # cnst += -2 * self.DB[vigile].passato_servizi_extra
-                cnst += self.DB[vigile].delta_notti * _MUL_NOTTI
-                cnst += self.DB[vigile].delta_sabati * _MUL_SABATI
-                cnst += self.DB[vigile].delta_festivi * _MUL_FESTIVI
+                cnst += self.DB[vigile].extra_notti() * _MUL_NOTTI
+                cnst += self.DB[vigile].extra_sabati() * _MUL_SABATI
+                cnst += self.DB[vigile].extra_festivi() * _MUL_FESTIVI
                 c = self.solver.Constraint(cnst, cnst, f"constr_costo_servizi_vigile({vigile})")
                 c.SetCoefficient(self.var_cost_servizi_vigile[vigile], -1)
                 mul_sabati = 1 + sum(self.DB[vigile].passato_sabati)  # Sabati più probabili se pochi in anni recenti
@@ -532,13 +539,13 @@ class ILPTurnazione:
                 continue
             num_servizi_medi = 0
             if not self.DB[vigile].esente_notti():
-                num_servizi_medi += _NUM_MEDIO_NOTTI + self.DB[vigile].delta_notti
+                num_servizi_medi += _NUM_MEDIO_NOTTI + self.DB[vigile].extra_notti()
             if not self.DB[vigile].esente_sabati():
-                num_servizi_medi += _NUM_MEDIO_SABATI + self.DB[vigile].delta_sabati
+                num_servizi_medi += _NUM_MEDIO_SABATI + self.DB[vigile].extra_sabati()
             if not self.DB[vigile].esente_festivi():
-                num_servizi_medi += _NUM_MEDIO_FESTIVI + self.DB[vigile].delta_festivi
+                num_servizi_medi += _NUM_MEDIO_FESTIVI + self.DB[vigile].extra_festivi()
             if self.DB[vigile].grado != "Aspirante":
-                c = self.solver.Constraint(math.floor(num_servizi_medi), math.ceil(num_servizi_medi),
+                c = self.solver.Constraint(_floor(num_servizi_medi), _ceil(num_servizi_medi),
                                            f"constr_servizi_totali_vigile({vigile})")
                 for collection in [
                     self.var_notti,
@@ -586,11 +593,11 @@ class ILPTurnazione:
                 ):
                     num_mesi -= 1
             if not self.DB[vigile].esente_sabati():
-                num_servizi_minimi += _NUM_MIN_SABATI + self.DB[vigile].delta_sabati
+                num_servizi_minimi += _floor(_NUM_MEDIO_SABATI + self.DB[vigile].extra_sabati())
             if not self.DB[vigile].esente_festivi():
-                num_servizi_minimi += _NUM_MIN_FESTIVI + self.DB[vigile].delta_festivi
+                num_servizi_minimi += _floor(_NUM_MEDIO_FESTIVI + self.DB[vigile].extra_festivi())
             if not self.DB[vigile].esente_notti():
-                num_servizi_minimi += _NUM_MIN_NOTTI + self.DB[vigile].delta_notti
+                num_servizi_minimi += _floor(_NUM_MEDIO_NOTTI + self.DB[vigile].extra_notti())
             if num_servizi_minimi > 0:
                 num_servizi_per_mese = math.ceil((num_servizi_minimi + 1) / num_mesi)
                 num_servizi_per_mese = max(num_servizi_per_mese, 2)  # At least a couple...
@@ -716,12 +723,18 @@ class ILPTurnazione:
                 line += f"\n\tNotti: {self.DB[vigile].notti} ({self.DB[vigile].notti_fuori_squadra})"
                 if self.DB[vigile].delta_notti != 0:
                     line += f" [Delta: {self.DB[vigile].delta_notti}]"
+                if self.DB[vigile].scambio_notti != 0:
+                    line += f" [Scambio: {self.DB[vigile].scambio_notti:+.3g}]"
                 line += f"\n\tSabati: {self.DB[vigile].sabati} ({self.DB[vigile].sabati_fuori_squadra})"
                 if self.DB[vigile].delta_sabati != 0:
                     line += f" [Delta: {self.DB[vigile].delta_sabati}]"
                 line += f"\n\tFestivi: {self.DB[vigile].festivi} ({self.DB[vigile].festivi_fuori_squadra})"
                 if self.DB[vigile].delta_festivi != 0:
                     line += f" [Delta: {self.DB[vigile].delta_festivi}]"
+                if self.DB[vigile].scambio_festivi != 0:
+                    line += f" [Scambio: {self.DB[vigile].scambio_festivi:+.3g}]"
+                if self.DB[vigile].cede_sabati:
+                    line += " [Sabati ceduti]"
                 if len(self.DB[vigile].eccezioni) > 0:
                     line += f"\n\tEccezioni: {self.DB[vigile].eccezioni}"
                 print(line)
@@ -801,6 +814,44 @@ class ILPTurnazione:
         self._NOTTE_CAPODANNO = self._get_offset_from_date(dt.date(anno, 12, 31))
         self._FESTIVI_ONEROSI = list(map(self._get_offset_from_date, festivi_onerosi))
 
+    def _calcola_scambio_graduati(self, pers_festivo, medio_sabati):
+        """Dal 2027 ogni domenica non festiva richiede un graduato (vedi graduato_per_festivo).
+        I graduati che coprono le domeniche non fanno sabati: ricevono in cambio tanti festivi quanti sabati
+        avrebbero fatto in media (più eventuali DeltaSabati), così il numero totale di servizi resta equo.
+        Se nemmeno così bastano a coprire tutte le domeniche, scambiano anche k notti con k festivi (k minimo)."""
+        domeniche = sum(1 for g in self.var_festivi if self._richiede_graduato(g))
+        graduati = [self.DB[v] for v in pers_festivo if self.DB[v].graduato_per_festivo()]
+        if domeniche == 0 or len(graduati) == 0:
+            return
+        for v in graduati:
+            if v.cede_sabati:
+                v.scambio_festivi = medio_sabati + v.delta_sabati
+        # Può scambiare notti solo chi le fa
+        scambiabili = [v for v in graduati if not v.esente_notti()]
+        posti_festivi = len(self.var_festivi) * 3
+        extra_festivi_tot = sum(v.extra_festivi() for v in self.DB.values())
+
+        for k in range(0, 53):
+            medio = (posti_festivi - extra_festivi_tot - k * len(scambiabili)) / len(pers_festivo)
+            capacita = sum(_ceil(medio + v.extra_festivi() + (k if v in scambiabili else 0)) for v in graduati)
+            if capacita >= domeniche:
+                break
+        else:
+            print(f"ATTENZIONE: {len(graduati)} graduati non bastano a coprire {domeniche} domeniche "
+                  f"nemmeno scambiando festivi e notti.")
+            return
+        for v in scambiabili:
+            v.scambio_festivi += k
+            v.scambio_notti = -k
+        ceduti = sum(v.cede_sabati for v in graduati)
+        print(f"\t{len(graduati)} graduati per {domeniche} domeniche (capacità {capacita}): "
+              f"{ceduti} cedono i sabati per {medio_sabati:.2f} festivi in più"
+              + (f", {len(scambiabili)} scambiano anche {k} notti con {k} festivi." if k > 0 else "."))
+
+    def _richiede_graduato(self, giorno):
+        """Dal 2027 le domeniche che non sono anche festivi speciali (e.g. Pasqua) richiedono un graduato."""
+        return self._get_weekday_from_offset(giorno) == 6 and giorno not in self._FESTIVI_SPECIALI
+
     def _get_date_from_offset(self, offset):
         return self.data_inizio + dt.timedelta(offset)
 
@@ -809,6 +860,16 @@ class ILPTurnazione:
 
     def _get_offset_from_date(self, date):
         return (date - self.data_inizio).days
+
+
+def _floor(x):
+    """floor tollerante agli errori di arrotondamento (e.g. 6.9999999 -> 7)"""
+    return math.floor(x + 1e-9)
+
+
+def _ceil(x):
+    """ceil tollerante agli errori di arrotondamento (e.g. 7.0000001 -> 7)"""
+    return math.ceil(x - 1e-9)
 
 
 def _calc_easter(year):

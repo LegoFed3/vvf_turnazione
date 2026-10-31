@@ -79,6 +79,10 @@ class Vigile:
 
     def __init__(self, id_vigile, nome, cognome, ddn, grado, email, autista, istruttore, squadre, dn, ds, df, exc):
         self.id = id_vigile
+        # Scambi festivi/notti calcolati dal modello (distinti dai Delta del file organico, che sono penalità)
+        self.scambio_notti = 0
+        self.scambio_festivi = 0
+        self.cede_sabati = False  # Graduato che copre le domeniche al posto dei sabati
         self.nome = nome
         self.cognome = cognome
         self.data_di_nascita = dt.datetime.strptime(ddn, '%d/%m/%Y').date()
@@ -124,6 +128,16 @@ class Vigile:
     def __repr__(self):
         return self.__str__()
 
+    # Servizi in più (o in meno) rispetto alla media: Delta da organico + scambi calcolati
+    def extra_notti(self):
+        return self.delta_notti + self.scambio_notti
+
+    def extra_sabati(self):
+        return 0 if self.cede_sabati else self.delta_sabati
+
+    def extra_festivi(self):
+        return self.delta_festivi + self.scambio_festivi
+
     def get_full_name(self):
         return f'{self.nome} {self.cognome}'
 
@@ -137,7 +151,7 @@ class Vigile:
 
     def esente_sabati(self):
         return (self.esente_servizi() or self.grado in ["Aspirante", "Complemento"] or "Aspettativa" in self.eccezioni
-                or "EsenteSabati" in self.eccezioni)
+                or "EsenteSabati" in self.eccezioni or self.cede_sabati)
 
     def esente_festivi(self):
         return (self.esente_servizi() or "Aspettativa" in self.eccezioni or "EsenteFestivi" in self.eccezioni
@@ -313,7 +327,7 @@ def save_solution_to_files(model):
                     servizi_extra = round(model.DB[vigile].numero_servizi() - model._SERVIZI_MINIMI)
                 line += f"{servizi_extra};"
                 line += f"{model.DB[vigile].passato_capodanni + model.DB[vigile].capodanno};"
-                line += f"{model.DB[vigile].sabati - model.DB[vigile].delta_sabati};"
+                line += f"{model.DB[vigile].sabati - model.DB[vigile].extra_sabati()};"
                 for sabati in model.DB[vigile].passato_sabati[0:9]:
                     line += f"{sabati};"
                 line += f"{model.DB[vigile].festivi_onerosi};"
