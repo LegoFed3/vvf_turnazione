@@ -22,8 +22,8 @@ class VVFParser(argparse.ArgumentParser):
         super().__init__(description="Compute yearly shifts for volunteer firefighters")
 
         # Positional Arguments
-        self.add_argument("data_di_inizio", type=date, help="start date, which must be a Friday")
-        self.add_argument("data_di_fine", type=date, help="end date, which must be a Friday")
+        self.add_argument("data_di_inizio", type=date, help="start date, which must be a Monday")
+        self.add_argument("data_di_fine", type=date, help="end date, which must be a Sunday")
         self.add_argument("squadra_di_partenza", type=int, help="starting squad for weekly availability")
 
         # Optional Arguments
@@ -53,14 +53,13 @@ t0 = time.time()
 parser = VVFParser()
 args = parser.parse_args()
 
-print(
-    "  __     ____     _______   _____                           _                   \n"
-    "  \ \   / /\ \   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  \n"
-    "   \ \ / /  \ \ / /| |_      | || | | | '__| '_ \ / _` |_  / |/ _ \| '_ \ / _ \ \n"
-    "    \ V /    \ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ \n"
-    "     \_/      \_/  |_|       |_| \__,_|_|  |_| |_|\__,_/___|_|\___/|_| |_|\___| \n"
-    "                                                                                \n"
-)
+print(r"""  __     ____     _______   _____                           _                   
+  \ \   / /\ \   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  
+   \ \ / /  \ \ / /| |_      | || | | | '__| '_ \ / _` |_  / |/ _ \| '_ \ / _ \ 
+    \ V /    \ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ 
+     \_/      \_/  |_|       |_| \__,_|_|  |_| |_|\__,_/___|_|\___/|_| |_|\___| 
+                                                                                
+""")
 print(f"Random seed: {args.seed}\n")
 
 model = vvf_turnazione.ILPTurnazione(args)

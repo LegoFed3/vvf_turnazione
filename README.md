@@ -19,8 +19,8 @@ Ad esempio: `python main.py 2023-1-16 2024-1-14 1` calcola i turni da lunedì 16
 
 ### Argomenti
 ```
-  data_di_inizio        Data di inizio, che dev'essere un venerdì
-  data_di_fine          Data di fine, che dev'essere un venerdì
+  data_di_inizio        Data di inizio, che dev'essere un lunedì
+  data_di_fine          Data di fine, che dev'essere una domenica
   squadra_di_partenza   Squadra reperibile per la prima settimana
 ```
 
@@ -74,8 +74,8 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.
 	* *Capodanni*: numero di capodanni assegnati negli anni precedenti.
-	* *Sabati*: 5 colonne indicanti il numero di sabati assegnati nei 5 anni precedenti.
-	* *Servizi Onerosi*: 5 colonne indicanti il numero di servizi onerosi assegnati nei 5 anni precedenti.
+	* *Sabati*: 10 colonne indicanti il numero di sabati assegnati nei 10 anni precedenti.
+	* *Servizi Onerosi*: 10 colonne indicanti il numero di servizi onerosi assegnati nei 10 anni precedenti.
 
 ## Output
 Il programma produce quattro file:

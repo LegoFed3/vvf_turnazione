@@ -6,35 +6,29 @@ import vvf_io
 
 
 class ILPTurnazione:
-    # Collections
-    giorno_squadra = {}
-    giorno_squadra_festivo = {}
-    var_notti = {}
-    var_sabati = {}
-    var_festivi = {}
-    var_cost_servizi_vigile = {}
-    var_cont_servizi_vigile_mese = {}
-    var_diff_servizi_vigile_mesi = {}
-
-    DB: dict[int, vvf_io.Vigile] = {}
-    vigili_squadra = {}
-    anno = 0
-    data_inizio = 0
-    data_fine = 0
-    num_medio_notti = -1
-    _printed_solution = False
-    _FESTIVI_SPECIALI = []
-    _FESTIVI_ONEROSI = []
-    _NOTTI_ONEROSE = []
-
-    # Model
-    solver = pywraplp.Solver('VVF_Turnazione', pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING)
-    STATUS = -1
-    solution = []
-    servizi_per_vigile = {}
-
     def __init__(self, args):
         print("* Creo il modello per la turnazione...")
+
+        # Collections (instance-level: class-level mutables would be shared across instances)
+        self.giorno_squadra = {}
+        self.giorno_squadra_festivo = {}
+        self.var_notti = {}
+        self.var_sabati = {}
+        self.var_festivi = {}
+        self.var_cost_servizi_vigile = {}
+        self.var_cont_servizi_vigile_mese = {}
+        self.var_diff_servizi_vigile_mesi = {}
+        self.DB: dict[int, vvf_io.Vigile] = {}
+        self._FESTIVI_SPECIALI = []
+        self._FESTIVI_ONEROSI = []
+        self._NOTTI_ONEROSE = []
+
+        # Model
+        self.solver = pywraplp.Solver('VVF_Turnazione', pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING)
+        self.STATUS = -1
+        self.solution = []
+        self.servizi_per_vigile = {}
+
         self.args = args
         self.data_inizio = args.data_di_inizio
         self.data_fine = args.data_di_fine
@@ -91,7 +85,7 @@ class ILPTurnazione:
                 self.giorno_squadra_festivo[curr_giorno] = curr_squadra
                 # Se lunedì è squadra precedente
                 if self._get_weekday_from_offset(curr_giorno) == 0:
-                    self.giorno_squadra_festivo[curr_giorno] = (curr_squadra - 2) % 4 + 1
+                    self.giorno_squadra_festivo[curr_giorno] = (curr_squadra - 2) % num_squadre + 1
 
                 # NOTTI
 
@@ -108,7 +102,7 @@ class ILPTurnazione:
                     ):
                         self.var_notti[curr_giorno][vigile] = \
                             self.solver.IntVar(0, 1, f"var_vigile({vigile})_notte({curr_giorno})")
-                        if curr_squadra not in self.DB[vigile].squadre:
+                        if curr_squadra not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                             zero_vars.append(self.var_notti[curr_giorno][vigile])
                         pers_notte.add(vigile)
 
@@ -144,16 +138,17 @@ class ILPTurnazione:
 
                     # VAR: vigili candidati per il festivo
                     self.var_festivi[curr_giorno] = {}
+                    squadra_festivo = self.giorno_squadra_festivo[curr_giorno]
                     for vigile in self.DB:
                         if (
                                 not self.DB[vigile].esente_festivi()
                                 and f"NoServiziMese{curr_data.month}" not in self.DB[vigile].eccezioni
-                                and (curr_squadra in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
+                                and (squadra_festivo in self.DB[vigile].squadre or 0 in self.DB[vigile].squadre
                                      or loose)
                         ):
                             self.var_festivi[curr_giorno][vigile] = \
                                 self.solver.IntVar(0, 1, f"var_vigile({vigile})_festivo({curr_giorno})")
-                            if curr_squadra not in self.DB[vigile].squadre:
+                            if squadra_festivo not in self.DB[vigile].squadre and self.DB[vigile].haSquadra():
                                 zero_vars.append(self.var_festivi[curr_giorno][vigile])
                             pers_festivo.add(vigile)
 
@@ -185,20 +180,22 @@ class ILPTurnazione:
             # CONSTR: max 1 notte per vigile a settimana
             # Max 2+ se fa notti extra o solo in alcuni giorni
             c_notti_settimana_vigile = {}
-            for vigile in self.var_notti[giorno]:  # curr_giorno?
+            # Tutti i candidati ad almeno una notte della settimana (ordine deterministico)
+            candidati_settimana = dict.fromkeys(v for i in giorni_settimana for v in self.var_notti[giorno + i])
+            for vigile in candidati_settimana:
                 max_notti_settimana = 1
                 if self.DB[vigile].delta_notti > 0:
                     max_notti_settimana = 2
                 lim_giorni = len([e for e in self.DB[vigile].eccezioni if "NoNottiGiorno" in e])
                 lim_mesi = len([e for e in self.DB[vigile].eccezioni if "NoNottiMese" in e])
-                if (
+                if lim_mesi >= 8:
+                    max_notti_settimana = 3
+                elif (
                         "NottiSoloSabatoFestivi" in self.DB[vigile].eccezioni
                         or lim_giorni >= 4
                         or lim_mesi >= 4
                 ):
                     max_notti_settimana = 2
-                elif lim_mesi >= 8:
-                    max_notti_settimana = 3
                 c_notti_settimana_vigile[vigile] = \
                     self.solver.Constraint(-self.solver.infinity(), max_notti_settimana,
                                            f"constr_notti_settimana({settimana})_vigile({vigile})")
@@ -507,7 +504,8 @@ class ILPTurnazione:
                     if giorno in self.var_festivi:
                         mul_squadra_festivo = 1
                         # Se lunedì è squadra precedente
-                        if not (self.giorno_squadra_festivo[giorno] in self.DB[vigile].squadre):
+                        if not (self.giorno_squadra_festivo[giorno] in self.DB[vigile].squadre
+                                or 0 in self.DB[vigile].squadre):
                             mul_squadra_festivo = 2  # Servizi NON di squadra costano di più
                         if vigile in self.var_festivi[giorno]:
                             # Base 1.5 per incoraggiare massima equità
@@ -518,12 +516,12 @@ class ILPTurnazione:
                                 c.SetCoefficient(self.var_festivi[giorno][vigile],
                                                  _MUL_FESTIVI * mul_bday * mul_squadra_festivo**2 + pen_festivi_onerosi)
                     if vigile in self.var_notti[giorno]:
-                        if giorno == self._NOTTI_ONEROSE[2]:  # Capodanno
+                        if giorno == self._NOTTE_CAPODANNO:
                             c.SetCoefficient(self.var_notti[giorno][vigile],
                                              1 * mul_bday + 100 * self.DB[vigile].passato_capodanni)
                         else:
-                            if mul_squadra > 1 and self.DB[vigile].delta_notti > 0 \
-                                    or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni:
+                            if mul_squadra > 1 and (self.DB[vigile].delta_notti > 0
+                                                    or "NottiAncheFuoriSettimana" in self.DB[vigile].eccezioni):
                                 mul_squadra = 1.5  # con notti in più paga meno a metterle fuori settimana
                             c.SetCoefficient(self.var_notti[giorno][vigile],
                                              _MUL_NOTTI * mul_bday * mul_squadra + pen_notti_onerose)
@@ -569,11 +567,11 @@ class ILPTurnazione:
                         continue
                     if vigile in self.var_notti[giorno]:
                         c.SetCoefficient(self.var_notti[giorno][vigile], -1)
-                        if giorno in self.var_sabati and vigile in self.var_sabati[giorno]:
-                            c.SetCoefficient(self.var_sabati[giorno][vigile], -1)
-                        elif giorno in self.var_festivi and vigile in self.var_festivi[giorno] \
-                                and "FestiviComunque" not in self.DB[vigile].eccezioni:
-                            c.SetCoefficient(self.var_festivi[giorno][vigile], -1)
+                    if giorno in self.var_sabati and vigile in self.var_sabati[giorno]:
+                        c.SetCoefficient(self.var_sabati[giorno][vigile], -1)
+                    elif giorno in self.var_festivi and vigile in self.var_festivi[giorno] \
+                            and "FestiviComunque" not in self.DB[vigile].eccezioni:
+                        c.SetCoefficient(self.var_festivi[giorno][vigile], -1)
 
         # Distribuisci servizi durante l'anno
         for vigile in self.var_cont_servizi_vigile_mese:
@@ -668,11 +666,14 @@ class ILPTurnazione:
         if self.STATUS == pywraplp.Solver.NOT_SOLVED:
             print('ATTENZIONE: non sono riuscito a calcolare una soluzione nel tempo concessomi.')
             print("\tDammi più tempo e riprova.")
-            exit(0)
+            exit(1)
         elif self.STATUS == pywraplp.Solver.INFEASIBLE:
             print('ATTENZIONE: Il problema non ammette soluzione.')
             print('\tRilassa i vincoli e riprova.')
-            exit(0)
+            exit(1)
+        elif self.STATUS not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+            print(f'ERRORE: il solver ha terminato con stato inatteso {self.STATUS}.')
+            exit(1)
         else:
             if self.STATUS == pywraplp.Solver.FEASIBLE:
                 print("ATTENZIONE: la soluzione trovata potrebbe non essere ottimale.")
@@ -685,7 +686,7 @@ class ILPTurnazione:
                 for giorno in self.var_notti:
                     if vigile in self.var_notti[giorno]:
                         self.DB[vigile].notti += int(self.var_notti[giorno][vigile].solution_value())
-                        if giorno == self._NOTTI_ONEROSE[2] and self.var_notti[giorno][vigile].solution_value() == 1:
+                        if giorno == self._NOTTE_CAPODANNO and self.var_notti[giorno][vigile].solution_value() == 1:
                             self.DB[vigile].capodanno += 1
                             capodanno = f"{self.DB[vigile].nome} {self.DB[vigile].cognome}" \
                                         f" ({self.DB[vigile].passato_capodanni} precedenti)"
@@ -761,40 +762,44 @@ class ILPTurnazione:
     def _compute_servizi_speciali_onerosi(self):
         pasqua = _calc_easter(self.anno)
         print(f"\tPasqua cade il {pasqua}.")
-        self._FESTIVI_SPECIALI = [
-            dt.date(self.anno, 1, 6),  # Epifania
+        anno = self.anno
+        festivi_speciali = [
+            dt.date(anno, 1, 6),  # Epifania
             pasqua,  # Pasqua
             pasqua + dt.timedelta(days=1),  # Pasquetta
-            dt.date(self.anno, 4, 25),  # 25 Aprile
-            dt.date(self.anno, 5, 1),  # 1 Maggio
-            dt.date(self.anno, 6, 2),  # 2 Giugno
-            dt.date(self.anno, 8, 15),  # Ferragosto
-            dt.date(self.anno, 10, 4),  # 4 Ottobre
-            dt.date(self.anno, 11, 1),  # 1 Novembre
-            dt.date(self.anno, 12, 8),  # 8 Dicembre
-            dt.date(self.anno, 12, 25),  # Natale
-            dt.date(self.anno, 12, 26),  # S. Stefano
-            dt.date(self.anno + 1, 1, 1),  # 1 Gennaio
-            dt.date(self.anno + 1, 1, 6),  # Epifania
+            dt.date(anno, 4, 25),  # 25 Aprile
+            dt.date(anno, 5, 1),  # 1 Maggio
+            dt.date(anno, 6, 2),  # 2 Giugno
+            dt.date(anno, 8, 15),  # Ferragosto
+            dt.date(anno, 10, 4),  # 4 Ottobre
+            dt.date(anno, 11, 1),  # 1 Novembre
+            dt.date(anno, 12, 8),  # 8 Dicembre
+            dt.date(anno, 12, 25),  # Natale
+            dt.date(anno, 12, 26),  # S. Stefano
+            dt.date(anno + 1, 1, 1),  # 1 Gennaio
+            dt.date(anno + 1, 1, 6),  # Epifania
         ]
-        self._NOTTI_ONEROSE = [
-            dt.date(self.anno, 12, 24),  # Natale
-            dt.date(self.anno, 12, 25),  # Natale
-            dt.date(self.anno, 12, 31),  # Capodanno
+        notti_onerose = [
+            dt.date(anno, 12, 24),  # Natale
+            dt.date(anno, 12, 25),  # Natale
+            dt.date(anno, 12, 31),  # Capodanno
         ]
-        self._FESTIVI_SPECIALI = list(map(self._get_offset_from_date, self._FESTIVI_SPECIALI))
-        self._NOTTI_ONEROSE = list(map(self._get_offset_from_date, self._NOTTI_ONEROSE))
-        self._FESTIVI_ONEROSI = [
-            self._FESTIVI_SPECIALI[1],  # Pasqua
-            self._FESTIVI_SPECIALI[2],  # Pasquetta
-            self._FESTIVI_SPECIALI[5],  # 2 Giugno
-            self._FESTIVI_SPECIALI[6],  # Ferragosto
-            dt.date(self.anno, 12, 24),  # Vigilia di Natale (se festivo)
-            self._FESTIVI_SPECIALI[9],  # Natale
-            self._FESTIVI_SPECIALI[10],  # S. Stefano
-            dt.date(self.anno, 12, 31),  # 31 Dicembre (se festivo)
-            self._FESTIVI_SPECIALI[11],  # 1 Gennaio
+        # Onerosi solo se festivi (i.e. 24 e 31 dicembre solo se cadono di domenica)
+        festivi_onerosi = [
+            pasqua,  # Pasqua
+            pasqua + dt.timedelta(days=1),  # Pasquetta
+            dt.date(anno, 6, 2),  # 2 Giugno
+            dt.date(anno, 8, 15),  # Ferragosto
+            dt.date(anno, 12, 24),  # Vigilia di Natale
+            dt.date(anno, 12, 25),  # Natale
+            dt.date(anno, 12, 26),  # S. Stefano
+            dt.date(anno, 12, 31),  # 31 Dicembre
+            dt.date(anno + 1, 1, 1),  # 1 Gennaio
         ]
+        self._FESTIVI_SPECIALI = list(map(self._get_offset_from_date, festivi_speciali))
+        self._NOTTI_ONEROSE = list(map(self._get_offset_from_date, notti_onerose))
+        self._NOTTE_CAPODANNO = self._get_offset_from_date(dt.date(anno, 12, 31))
+        self._FESTIVI_ONEROSI = list(map(self._get_offset_from_date, festivi_onerosi))
 
     def _get_date_from_offset(self, offset):
         return self.data_inizio + dt.timedelta(offset)

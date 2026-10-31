@@ -145,3 +145,4 @@ CURRENT_RESULTS/
 *.ics
 Tools/credentials.json
 Tools/token.json
+.vscode/
