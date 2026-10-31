@@ -19,7 +19,6 @@ _GRADI_VALIDI = [
 ]
 
 _ECCEZZIONI_VALIDE = [
-    "TODO", # Placeholder
     # Cariche
     "Segretario",
     "Cassiere",
@@ -43,6 +42,8 @@ _ECCEZZIONI_VALIDE = [
     "NottiAncheFuoriSettimana",
     "FestiviComunque",
 ]
+# Eccezioni con parametro: FestivoForzatoAAAAMMGG
+_PREFISSO_FESTIVO_FORZATO = "FestivoForzato"
 for i in range(1, 13 + 1):
     _ECCEZZIONI_VALIDE.append(f"NoNottiMese{i}")
     _ECCEZZIONI_VALIDE.append(f"NoSabatiMese{i}")
@@ -110,12 +111,21 @@ class Vigile:
             exit(-1)
         if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
             self.squadre = _DEFAULT_SQUADRA
+        self.festivi_forzati = []
         for e in self.eccezioni:
-            if e not in _ECCEZZIONI_VALIDE:
+            if e.startswith(_PREFISSO_FESTIVO_FORZATO):
+                try:
+                    self.festivi_forzati.append(
+                        dt.datetime.strptime(e[len(_PREFISSO_FESTIVO_FORZATO):], '%Y%m%d').date())
+                except ValueError:
+                    print(f"ERRORE: data non valida in {e} per il vigile {self.id} (formato: "
+                          f"{_PREFISSO_FESTIVO_FORZATO}AAAAMMGG)")
+                    exit(-1)
+            elif e.upper() == "TODO":
+                print(f"ATTENZIONE: il vigile {self.id} ha un eccezione TODO!")
+            elif e not in _ECCEZZIONI_VALIDE:
                 print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
                 exit(-1)
-            elif e == "TODO":
-                print(f"ATTENZIONE: il vigile {self.id} ha un eccezione TODO!")
         if "Aspettativa" in self.eccezioni and self.squadre != _DEFAULT_SQUADRA:
             print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")

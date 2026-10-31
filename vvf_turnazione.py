@@ -227,6 +227,7 @@ class ILPTurnazione:
         _NUM_MIN_SABATI = math.floor(_NUM_MEDIO_SABATI)
         _NUM_MAX_SABATI = math.ceil(_NUM_MEDIO_SABATI)
 
+        self._imponi_festivi_forzati()
         self._calcola_scambio_graduati(pers_festivo, _NUM_MEDIO_SABATI)
 
         notti_extra_tot = sum([v.extra_notti() for v in self.DB.values()])
@@ -847,6 +848,21 @@ class ILPTurnazione:
         print(f"\t{len(graduati)} graduati per {domeniche} domeniche (capacità {capacita}): "
               f"{ceduti} cedono i sabati per {medio_sabati:.2f} festivi in più"
               + (f", {len(scambiabili)} scambiano anche {k} notti con {k} festivi." if k > 0 else "."))
+
+    def _imponi_festivi_forzati(self):
+        """FestivoForzatoAAAAMMGG: il vigile deve essere assegnato al festivo indicato."""
+        for vigile, v in self.DB.items():
+            for data in v.festivi_forzati:
+                giorno = self._get_offset_from_date(data)
+                if giorno not in self.var_festivi:
+                    print(f"ERRORE: il {data} (FestivoForzato del vigile {v}) non è un festivo del periodo!")
+                    exit(-1)
+                if vigile not in self.var_festivi[giorno]:
+                    print(f"ERRORE: il vigile {v} non può essere assegnato al festivo forzato del {data} "
+                          f"(esenzioni o altre eccezioni lo escludono).")
+                    exit(-1)
+                c = self.solver.Constraint(1, 1, f"constr_ex_festivo_forzato_vigile({vigile})_giorno({giorno})")
+                c.SetCoefficient(self.var_festivi[giorno][vigile], 1)
 
     def _richiede_graduato(self, giorno):
         """Dal 2027 le domeniche che non sono anche festivi speciali (e.g. Pasqua) richiedono un graduato."""

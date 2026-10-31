@@ -56,7 +56,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
 	* *Email*: email di servizio del vigile.
 	* *Autista*: 'y' se il vigile ha patente C e può quindi essere autista in servizio festivo.
 	* *Istruttore Allievi*: 'y' se il vigile è autorizzato ad avere allievi affiancati durante festivi.
-	* *DeltaNotti, DeltaSabati, DeltaFestivi*: servizi extra del tipo indicato.
+	* *DeltaNotti, DeltaSabati, DeltaFestivi*: servizi extra (o in meno, se negativi) del tipo indicato rispetto alla media calcolata dal programma, e.g. come penalità o per richieste particolari.
 	* *Eccezioni*: lista separata da virgola e senza spazi (e case sensitive) di eccezioni, dovute a cariche o altre richieste, alla normale turnazione. Le eccezioni valide sono:
 		* Cariche: Segretario, Cassiere, Magazziniere, Vicemagazziniere, Resp. Allievi.
 		* Altre richieste: 
@@ -70,6 +70,7 @@ Il programma consuma in input due file (esempi dei quali sono forniti in questo 
             * NoFestiviMese\[1-13\]: limiti ai giorni per i quali è possibile assegnare festivi al vigile.
 			* NoServiziMese\[1-13\], FestiviComunque: limiti ai giorni per i quali è possibile assegnare servizi di qualunque genere al vigile, ed eccezione per i festivi.
 			* NottiAncheFuoriSettimana: consente di assegnare notti anche fuori dalla settimana di reperibilità al vigile (versione individuale di -l).
+			* FestivoForzatoAAAAMMGG: il vigile dev'essere assegnato al festivo della data indicata. Si può ripetere per più date. Il programma termina con errore se la data non è un festivo del periodo o se altre eccezioni o esenzioni del vigile lo escludono da quel festivo. Se il festivo è oneroso, conta come l'unico servizio oneroso dell'anno del vigile.
 * *riporti.csv*: opzionale, contiene numeri di servizi extra o onerosi assegnati negli ultimi anni. Il file è strutturato come segue:
 	* *ID*: identificativo numerico del vigile nel file organico.csv.
 	* *Servizi Extra Media*: numero (potenzialmente negativo) indicante qualora al vigile (che non ricopre cariche particolari) siano stati assegnati più o meno servizi della media nell'anno precedente.
