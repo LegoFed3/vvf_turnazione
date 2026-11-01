@@ -81,7 +81,8 @@ args = parser.parse_args()
 setup_logging(args.log_file)
 logger = logging.getLogger("main")
 
-logger.info(r"""  __     ____     _______   _____                           _                   
+logger.info(r"""
+  __     ____     _______   _____                           _                   
   \ \   / /\ \   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  
    \ \ / /  \ \ / /| |_      | || | | | '__| '_ \ / _` |_  / |/ _ \| '_ \ / _ \ 
     \ V /    \ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ 

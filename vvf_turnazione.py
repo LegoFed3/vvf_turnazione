@@ -609,7 +609,6 @@ class Turnazione:
         return self.cp_solver.Value(var)
 
     def print_solution(self):
-        logger.info("")
         if self.STATUS == cp_model.UNKNOWN:
             logger.warning('non sono riuscito a calcolare una soluzione nel tempo concessomi.')
             logger.info("\tDammi più tempo e riprova.")
@@ -628,7 +627,7 @@ class Turnazione:
         capodanno = "NON CALCOLATO"
         logger.info('* Soluzione:')
         logger.info(f'Costo totale dei servizi: {self.costo_totale():g}')
-        logger.info('Servizi per vigile:')
+        srv_lines = []
         for vigile in self.DB:
             v = self.DB[vigile]
             for giorno in self.var_notti:
@@ -673,7 +672,8 @@ class Turnazione:
                 line += " [Sabati ceduti]"
             if len(v.eccezioni) > 0:
                 line += f"\n\tEccezioni: {v.eccezioni}"
-            logger.info(line)
+            srv_lines.append(line)
+        logger.info('Servizi per vigile:\n' + '\n'.join(srv_lines))
         logger.info(f"Totale servizi assegnati fuori dalla squadra: {servizi_fuori_squadra}")
         logger.info(f"Vigile designato per la notte di capodanno: {capodanno}")
 
