@@ -1,9 +1,12 @@
 import calendar
 import datetime as dt
+import logging
 import pandas as pd
 import icalendar as ical
 import pytz
 import os
+
+logger = logging.getLogger(__name__)
 
 _GRADI_VALIDI = [
     "Comandante",
@@ -107,7 +110,7 @@ class Vigile:
 
         # Verifiche
         if self.grado not in _GRADI_VALIDI:
-            print("ERRORE! Grado sconosciuto: ", self.grado)
+            logger.error(f"Grado sconosciuto: {self.grado}")
             exit(-1)
         if self.grado in ["Comandante", "Vicecomandante", "Ispettore", "Presidente"]:
             self.squadre = _DEFAULT_SQUADRA
@@ -118,20 +121,20 @@ class Vigile:
                     self.festivi_forzati.append(
                         dt.datetime.strptime(e[len(_PREFISSO_FESTIVO_FORZATO):], '%Y%m%d').date())
                 except ValueError:
-                    print(f"ERRORE: data non valida in {e} per il vigile {self.id} (formato: "
+                    logger.error(f"data non valida in {e} per il vigile {self.id} (formato: "
                           f"{_PREFISSO_FESTIVO_FORZATO}AAAAMMGG)")
                     exit(-1)
             elif e.upper() == "TODO":
-                print(f"ATTENZIONE: il vigile {self.id} ha un eccezione TODO!")
+                logger.warning(f"il vigile {self.id} ha un eccezione TODO!")
             elif e not in _ECCEZZIONI_VALIDE:
-                print("ERRORE: eccezione sconosciuta {} per il vigile {}".format(e, self.id))
+                logger.error("eccezione sconosciuta {} per il vigile {}".format(e, self.id))
                 exit(-1)
         if "Aspettativa" in self.eccezioni and self.squadre != _DEFAULT_SQUADRA:
-            print(f"ATTENZIONE: il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
+            logger.warning(f"il vigile {self.id} è in aspettativa ma è assegnato alla squadra {self.squadre}! "
                   f"Ignoro la squadra.")
             self.squadre = _DEFAULT_SQUADRA
 
-    def __str__(self):  # Called by print()
+    def __str__(self):  # Called by logger.info("")
         s = "{:03d} {}".format(self.id, self.grado)
         return s + f" {self.nome} {self.cognome}"
 
@@ -205,11 +208,11 @@ class Vigile:
 
 
 def read_csv_vigili(filename):
-    print(f"\tLeggo file organico {filename}...")
+    logger.info(f"\tLeggo file organico {filename}...")
     db = {}
     if not os.path.isfile(filename):
-        print(f"ERRORE: il file '{filename}' che descrive i vigili non esiste!")
-        print("\tImpossibile continuare senza.")
+        logger.error(f"il file '{filename}' che descrive i vigili non esiste!")
+        logger.info("\tImpossibile continuare senza.")
         exit(-1)
     df = pd.read_csv(filename, sep=";", dtype=str, keep_default_na=False)
     for idx, row in df.iterrows():
@@ -235,10 +238,10 @@ def read_csv_vigili(filename):
 
 
 def read_csv_riporti(db, filename):
-    print(f"\tLeggo file riporti {filename}...")
+    logger.info(f"\tLeggo file riporti {filename}...")
     if not os.path.isfile(filename):
-        print(f"ATTENZIONE: il file '{filename}' che descrive i riporti dello scorso anno non esiste!")
-        print("\tContinuo senza.")
+        logger.warning(f"il file '{filename}' che descrive i riporti dello scorso anno non esiste!")
+        logger.info("\tContinuo senza.")
         return db
     with open(filename) as rf:
         for line in rf:
@@ -271,7 +274,7 @@ def _crea_evento(model, organizer, tz, uid, nome, inizio, fine, vigili):
     e.add('dtend', _localize(fine))
     for vigile in vigili:
         if model.DB[vigile].email is None:
-            print(f"ATTENZIONE: il vigile {vigile} non ha email, non lo aggiungo all'evento {uid}.")
+            logger.warning(f"il vigile {vigile} non ha email, non lo aggiungo all'evento {uid}.")
             continue
         a = ical.vCalAddress(f'MAILTO:{model.DB[vigile].email}')
         a.params['cn'] = ical.vText(f'{model.DB[vigile].get_full_name()}')
@@ -282,11 +285,11 @@ def _crea_evento(model, organizer, tz, uid, nome, inizio, fine, vigili):
 
 def save_solution_to_files(model):
     if len(model.solution) == 0:
-        print("ERRORE: impossibile salvare soluzione vuota su file.")
+        logger.error("impossibile salvare soluzione vuota su file.")
         return
     else:
         # Salva i turni calcolati in un CSV
-        print("Creo file di output...")
+        logger.info("Creo file di output...")
 
         with open(f"./turni_{model.anno}.csv", "w") as out:
             out.write("Data;Notte;Sabato/Festivo;;;;Affiancamento\n")
@@ -375,6 +378,6 @@ def save_solution_to_files(model):
         with open(f"./icalendar_{model.anno}.ics", "wb") as out:
             out.write(cal.to_ical())
 
-        print(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.txt, icalendar_{model.anno}.ics "
+        logger.info(f"Dati salvati in turni_{model.anno}.csv, turni_per_vigile_{model.anno}.txt, icalendar_{model.anno}.ics "
               f"e riporti_{model.anno + 1}.csv.")
         return

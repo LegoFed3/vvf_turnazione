@@ -1,8 +1,10 @@
 import time
 import datetime as dt
 import argparse
+import logging
+import sys
 import vvf_turnazione
-import vvf_affiancamenti
+# import vvf_affiancamenti
 import vvf_io
 
 
@@ -31,8 +33,11 @@ class VVFParser(argparse.ArgumentParser):
                           help="enable assigning shifts on firefighter's birthdays",
                           action="store_true")
         self.add_argument("-j", "--jobs", type=int,
-                          help="number of parallel threads to solve the model (Default: 1)",
-                          default=1)
+                          help="number of parallel workers to solve the model; CP-SAT needs 8+ to perform well "
+                               "(Default: 8)",
+                          default=8)
+        self.add_argument("--log-file", type=str,
+                          help="also write the log (with timestamps) to this file, overwriting it")
         self.add_argument("-l", "--loose",
                           help="enable assigning night shifts outside weekly availability",
                           action="store_true")
@@ -42,27 +47,49 @@ class VVFParser(argparse.ArgumentParser):
         self.add_argument("-r", "--riporti-fn", type=str,
                           help="path to CSV containing last year's extra and onerous shifts (Default: riporti.csv)",
                           default="./riporti.csv")
-        self.add_argument("-s", "--seed", type=int, help="SCIP random seed", default=round(time.time()))
+        self.add_argument("-p", "--partenza", type=str,
+                          help="path to a turni CSV (e.g. from a previous run) used as the solver's starting solution")
         self.add_argument("-t", "--time-limit", type=int,
                           help="time limit in seconds (Default: no limit)", default=0)
         self.add_argument("-v", "--verbose", help="enable verbose solver output",
                           action="store_true")
 
 
+class ConsoleFormatter(logging.Formatter):
+    def format(self, record):
+        message = super().format(record)
+        return f"{record.levelname}: {message}" if record.levelno >= logging.WARNING else message
+
+
+def setup_logging(log_file):
+    logging.addLevelName(logging.WARNING, "ATTENZIONE")
+    logging.addLevelName(logging.ERROR, "ERRORE")
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    console = logging.StreamHandler(sys.stdout)
+    console.setFormatter(ConsoleFormatter("%(message)s"))
+    root.addHandler(console)
+    if log_file:
+        file_handler = logging.FileHandler(log_file, mode="w", encoding="utf-8")
+        file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        root.addHandler(file_handler)
+
+
 t0 = time.time()
 parser = VVFParser()
 args = parser.parse_args()
+setup_logging(args.log_file)
+logger = logging.getLogger("main")
 
-print(r"""  __     ____     _______   _____                           _                   
+logger.info(r"""  __     ____     _______   _____                           _                   
   \ \   / /\ \   / /  ___| |_   _|   _ _ __ _ __   __ _ ___(_) ___  _ __   ___  
    \ \ / /  \ \ / /| |_      | || | | | '__| '_ \ / _` |_  / |/ _ \| '_ \ / _ \ 
     \ V /    \ V / |  _|     | || |_| | |  | | | | (_| |/ /| | (_) | | | |  __/ 
      \_/      \_/  |_|       |_| \__,_|_|  |_| |_|\__,_/___|_|\___/|_| |_|\___| 
                                                                                 
 """)
-print(f"Random seed: {args.seed}\n")
 
-model = vvf_turnazione.ILPTurnazione(args)
+model = vvf_turnazione.Turnazione(args)
 model.solve()
 
 # model = vvf_affiancamenti.ILPAffiancamenti(model)
@@ -71,4 +98,4 @@ model.solve()
 vvf_io.save_solution_to_files(model)
 
 t1 = time.time()
-print("Soluzione trovata in {0:.2f} secondi.".format(t1 - t0))
+logger.info("Soluzione trovata in {0:.2f} secondi.".format(t1 - t0))

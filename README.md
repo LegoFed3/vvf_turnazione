@@ -1,9 +1,9 @@
 # Turnazione VVF
 Questo programma calcola la turnazione per i vigili del fuoco volontari, tenendo conto dei numerosi vincoli che ciò comporta, e del numero e tipo di servizi particolari svolti nel recente passato.
-È basato su una formulazione di [programmazione lineare intera](https://it.wikipedia.org/wiki/Programmazione_lineare) (Integer Linear Programming, ILP).
+È basato su un modello di [programmazione a vincoli](https://it.wikipedia.org/wiki/Programmazione_a_vincoli) (Constraint Programming), risolto con il solver CP-SAT.
 
 ## Prerequisiti
-Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.10) e si basa, per la soluzione di una formulazione ILP, su [Google OR Tools](https://developers.google.com/optimization) ed il solver SCIP da esso fornito, oltre che sulla librerie [Pandas](https://pandas.pydata.org/) ed [Icalendar](https://icalendar.readthedocs.io).
+Questo programma è scritto in [Python](https://www.python.org/) (testato con la versione 3.12) e si basa, per la soluzione del modello, su [Google OR Tools](https://developers.google.com/optimization) (testato con la versione 9.15) ed il solver CP-SAT da esso fornito, oltre che sulla librerie [Pandas](https://pandas.pydata.org/) ed [Icalendar](https://icalendar.readthedocs.io).
 Su e.g. Ubuntu Linux (e distribuzioni analoghe) si possono installare con:
 ```
 sudo apt install python3
@@ -29,8 +29,10 @@ Ad esempio: `python main.py 2023-1-16 2024-1-14 1` calcola i turni da lunedì 16
   -h, --help            Mostra le opzioni d'uso (in inglese)
   -c, --servizi-compleanno
                         Abilita l'assegnazione di servizi il giorno di compleanno
-  -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello
-                        Default: 1
+  -j JOBS, --jobs JOBS  Numero di thread paralleli per la risoluzione del modello. CP-SAT combina strategie
+                        di ricerca diverse in parallelo: con meno di 8 thread le prestazioni crollano
+                        Default: 8
+  --log-file LOG_FILE   Scrive il log (con data e ora) anche nel file indicato, sovrascrivendolo
   -l, --loose           Abilita l'assegnazione di notturni al di fuori della settimana di reperibilità
   -o ORGANICO_FN, --organico-fn ORGANICO_FN
                         Percorso del file CSV contenente i dati dei vigili
@@ -38,7 +40,12 @@ Ad esempio: `python main.py 2023-1-16 2024-1-14 1` calcola i turni da lunedì 16
   -r RIPORTI_FN, --riporti-fn RIPORTI_FN
                         Percorso del file CSV contenente i riporti dei turni extra od onerosi svolti negli anni precedenti
                         Default: riporti.csv
-  -s SEED, --seed SEED  Configura uno SCIP random seed statico
+  -p PARTENZA, --partenza PARTENZA
+                        Percorso di un file turni_<anno>.csv (e.g. di un'esecuzione precedente) da usare
+                        come soluzione di partenza per il solver. Se è ancora valida e nessuna soluzione
+                        costa meno, viene riprodotta identica; altrimenti serve solo da spunto. Utile per
+                        riprodurre una turnazione già pubblicata, dato che esecuzioni diverse possono
+                        trovare soluzioni di pari costo ma diverse
   -t TIME_LIMIT, --time-limit TIME_LIMIT
                         Tempo limite in secondi
                         Default: nessun limite
@@ -84,3 +91,5 @@ Il programma produce quattro file:
 * *turni_per_vigile_&lt;anno&gt;.txt*: contiene la turnistica calcolata organizzata come lista servizi per ogni vigile.
 * *riporti_&lt;anno&gt;.csv*: file dei riporti (aggiornato) da utilizzare per il calcolo l'anno successivo.
 * *icalendar__&lt;anno&gt;.ics*: file icalendar contenente l'intera turnazione calcolata.
+
+Se il problema non ammette soluzione, il programma cerca automaticamente un insieme irriducibile di vincoli incompatibili (IIS): vincoli che insieme non ammettono soluzione, ma tali che rimuovendone uno qualsiasi il resto è risolvibile. I vincoli sono stampati con nomi e date leggibili ed una breve descrizione, ad indicare quali regole o eccezioni (e di quali vigili) rendono il problema irrisolvibile. La ricerca usa lo stesso limite di tempo (-t); se non basta, l'insieme stampato è comunque incompatibile ma potrebbe non essere minimo.
