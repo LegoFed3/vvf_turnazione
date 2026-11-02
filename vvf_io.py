@@ -136,7 +136,17 @@ class Vigile:
 
     def __str__(self):  # Called by logger.info("")
         s = "{:03d} {}".format(self.id, self.grado)
-        return s + f" {self.nome} {self.cognome}"
+        s += f" {self.nome} {self.cognome}"
+        if self.squadre in (0, [0], []):
+            s += " (squadra N/A)"
+        elif isinstance(self.squadre, list):
+            if len(self.squadre) == 1:
+                s += f" (squadra {self.squadre[0]})"
+            else:
+                s += f" (squadre {', '.join(map(str, self.squadre))})"
+        else:
+            s += f" (squadra {self.squadre})"
+        return s 
 
     def __repr__(self):
         return self.__str__()

@@ -565,7 +565,7 @@ class Turnazione:
     # Soluzione
     # ------------------------------------------------------------------------------------------------------------
 
-    def _risolvi(self):
+    def _solve(self):
         # Con una soluzione di partenza, valutala prima (tutte le variabili fissate ai valori suggeriti)
         partenza = None
         if self.args.partenza:
@@ -601,7 +601,7 @@ class Turnazione:
 
     def solve(self):
         logger.info("* Risolvo il modello... (max {}s)".format(self.args.time_limit if self.args.time_limit > 0 else "∞"))
-        self._risolvi()
+        self._solve()
         self.print_solution()
         self.save_solution()
 
